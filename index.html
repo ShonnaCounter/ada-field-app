@@ -135,7 +135,7 @@
   <div class="scroll-body" style="padding:0">
     <div class="home-logo">
       <div class="logo-text">ADA Field App</div>
-      <div class="logo-sub">Shonna Counter · Plaintiff Documentation</div>
+      <div class="logo-sub">Site Documentation</div>
     </div>
     <div class="home-buttons">
       <button class="home-new-btn" onclick="startNewCase()">NEW CASE</button>
@@ -949,7 +949,8 @@ function startNewCase(){
     violations:{},receipt:'',receiptMode:'',photosTaken:null,restroom:'',spoke:'',
     assistYes:false,assistNote:'',with:'',elsewhere:false,elsewhereDetail:'',
     additional:'',severity:0,severityNote:'',notes:'',
-    legalTheory:{'302a':false,'304':false},legalNotes:{'302a':'','304':''}};
+    legalTheory:{'302a':false,'304':false},legalNotes:{'302a':'','304':''},
+    _workQueue:[],_workIndex:0};
   document.getElementById('inp-name').value='';
   document.getElementById('btn-name').disabled=true;
   document.getElementById('t2-toggle').checked=false;
@@ -1079,62 +1080,96 @@ const TILE_SUBCATS = {
 };
 
 function handleCatsNext(){
-  subcatQueue=[];
-  state.selectedTopCats.forEach(cat=>{if(TILE_SUBCATS[cat]) subcatQueue.push(cat);});
-  subcatQueueIndex=0;
-  if(subcatQueue.length>0) showSubcatPicker(subcatQueue[0]);
-  else{buildFinalCatQueue(); startViolationDrilldown();}
+  // Build a master ordered list of work items: {type:'subcat'|'violations', cat}
+  // For each selected cat in order: if it needs subcats, show subcat picker first, then violations
+  state._workQueue = [];
+  state.selectedTopCats.forEach(cat=>{
+    if(TILE_SUBCATS[cat]) state._workQueue.push({type:'subcat', cat});
+    state._workQueue.push({type:'violations', cat});
+  });
+  state._workIndex = 0;
+  processNextWorkItem();
+}
+
+function processNextWorkItem(){
+  if(state._workIndex >= state._workQueue.length){
+    goScreen('s-intake');
+    return;
+  }
+  const item = state._workQueue[state._workIndex];
+  if(item.type==='subcat'){
+    showSubcatPicker(item.cat);
+  } else {
+    // Build violation keys for this category
+    const violKeys = getCatViolationKeys(item.cat);
+    if(violKeys.length === 0){
+      // No violations for this cat (e.g. subcat not selected) — skip
+      state._workIndex++;
+      processNextWorkItem();
+    } else {
+      catQueue = violKeys;
+      currentCatIndex = 0;
+      renderViolationScreen();
+      goScreen('s-violations');
+    }
+  }
+}
+
+function getCatViolationKeys(cat){
+  const keys = [];
+  if(TILE_SUBCATS[cat]){
+    const subs = state.selectedSubcats[cat] || [];
+    if(cat==='Parking') subs.forEach(s=>keys.push('Parking — '+s));
+    else if(cat==='Path of Travel') subs.forEach(s=>keys.push('Path of Travel — '+s));
+    else if(cat==='Restrooms') subs.forEach(s=>keys.push('Restrooms — '+s));
+    else if(cat==='Policy Issues') subs.forEach(s=>keys.push('Policy Issues — '+s));
+    else if(cat==='Retail — Shelving & Displays'){
+      subs.forEach(s=>{
+        if(s==='Shelving & Displays') keys.push('Retail — Shelving & Displays');
+        else if(s==='Fitting Rooms') keys.push('Retail — Fitting Rooms');
+        else if(s==='Mailbox / Packages') keys.push('Retail — Mailbox / Packages');
+      });
+    }
+    else if(cat==='Outdoor & Recreation') subs.forEach(s=>keys.push(s));
+  } else {
+    if(VIOLATIONS[cat]) keys.push(cat);
+  }
+  return keys;
 }
 
 function showSubcatPicker(parent){
   currentSubcatParent=parent;
   document.getElementById('subcat-title').textContent=parent+' — Which areas?';
-  const key=parent;
   const subs=TILE_SUBCATS[parent];
   const g=document.getElementById('subcat-grid');g.innerHTML='';
   subs.forEach(sub=>{
     const d=document.createElement('div');
-    const already=(state.selectedSubcats[key]||[]).includes(sub);
+    const already=(state.selectedSubcats[parent]||[]).includes(sub);
     d.className='tile'+(already?' selected':'');d.textContent=sub;
     d.onclick=()=>{
-      if(!state.selectedSubcats[key]) state.selectedSubcats[key]=[];
-      const i=state.selectedSubcats[key].indexOf(sub);
-      if(i>=0){state.selectedSubcats[key].splice(i,1);d.classList.remove('selected');}
-      else{state.selectedSubcats[key].push(sub);d.classList.add('selected');}
-      document.getElementById('btn-subcats').disabled=!(state.selectedSubcats[key]&&state.selectedSubcats[key].length>0);
+      if(!state.selectedSubcats[parent]) state.selectedSubcats[parent]=[];
+      const i=state.selectedSubcats[parent].indexOf(sub);
+      if(i>=0){state.selectedSubcats[parent].splice(i,1);d.classList.remove('selected');}
+      else{state.selectedSubcats[parent].push(sub);d.classList.add('selected');}
+      document.getElementById('btn-subcats').disabled=!(state.selectedSubcats[parent]&&state.selectedSubcats[parent].length>0);
     };
     g.appendChild(d);
   });
-  document.getElementById('btn-subcats').disabled=!(state.selectedSubcats[key]&&state.selectedSubcats[key].length>0);
+  document.getElementById('btn-subcats').disabled=!(state.selectedSubcats[parent]&&state.selectedSubcats[parent].length>0);
   goScreen('s-subcats');
 }
 
 function handleSubcatsNext(){
-  subcatQueueIndex++;
-  if(subcatQueueIndex<subcatQueue.length) showSubcatPicker(subcatQueue[subcatQueueIndex]);
-  else{buildFinalCatQueue(); startViolationDrilldown();}
+  // Done with this subcat picker — move to next work item (violations for same cat)
+  state._workIndex++;
+  processNextWorkItem();
 }
 
+// Legacy — keep for reference but no longer used as entry point
 function buildFinalCatQueue(){
   const queue=[];
   state.selectedTopCats.forEach(cat=>{
-    if(TILE_SUBCATS[cat]){
-      const subs=state.selectedSubcats[cat]||[];
-      if(cat==='Parking') subs.forEach(s=>queue.push('Parking — '+(s==='Parking Spaces'?'Parking Spaces':s)));
-      else if(cat==='Path of Travel') subs.forEach(s=>queue.push('Path of Travel — '+s));
-      else if(cat==='Restrooms') subs.forEach(s=>queue.push('Restrooms — '+s));
-      else if(cat==='Policy Issues') subs.forEach(s=>queue.push('Policy Issues — '+s));
-      else if(cat==='Retail — Shelving & Displays'){
-        subs.forEach(s=>{
-          if(s==='Shelving & Displays') queue.push('Retail — Shelving & Displays');
-          else if(s==='Fitting Rooms') queue.push('Retail — Fitting Rooms');
-          else if(s==='Mailbox / Packages') queue.push('Retail — Mailbox / Packages');
-        });
-      }
-      else if(cat==='Outdoor & Recreation') subs.forEach(s=>queue.push(s));
-    } else {
-      if(VIOLATIONS[cat]) queue.push(cat);
-    }
+    queue.push(...getCatViolationKeys(cat));
   });
   state.selectedCats=queue;
 }
@@ -1217,8 +1252,43 @@ function renderViolationScreen(){
   });
 }
 
-function nextCat(){if(currentCatIndex<catQueue.length-1){currentCatIndex++;renderViolationScreen();document.getElementById('viol-body').scrollTop=0;}else goScreen('s-intake');}
-function prevCat(){if(currentCatIndex>0){currentCatIndex--;renderViolationScreen();}else goScreen('s-cats');}
+function startViolationDrilldown(){
+  // Legacy entry point — not used in new flow
+  catQueue=[...state.selectedCats];
+  currentCatIndex=0;
+  renderViolationScreen();
+  goScreen('s-violations');
+}
+
+function nextCat(){
+  if(currentCatIndex<catQueue.length-1){
+    currentCatIndex++;
+    renderViolationScreen();
+    document.getElementById('viol-body').scrollTop=0;
+  } else {
+    // Done with this category's violations — advance work queue
+    state._workIndex++;
+    processNextWorkItem();
+  }
+}
+
+function prevCat(){
+  if(currentCatIndex>0){
+    currentCatIndex--;
+    renderViolationScreen();
+  } else {
+    // At first violation screen for this cat — go back to subcat picker if applicable, else cats screen
+    // Find the current cat in work queue
+    const item=state._workQueue[state._workIndex];
+    if(item && TILE_SUBCATS[item.cat]){
+      // Go back to this cat's subcat picker
+      state._workIndex--;
+      showSubcatPicker(item.cat);
+    } else {
+      goScreen('s-cats');
+    }
+  }
+}
 
 // ============================================================
 // SITE NOTES HELPERS
@@ -1276,8 +1346,8 @@ function buildSeverityGrid(){
 // ============================================================
 
 const LEGAL_ITEMS = [
-  {key:'302a', label:'Policy or procedure failure', hint:'Staff had no procedure for access — no training, no accommodation offered, no operational fix.'},
-  {key:'304',  label:'Barrier could be removed',    hint:'A physical barrier exists that could be removed without much difficulty or expense.'}
+  {key:'302a', label:'Operational/policy failure', hint:'No procedure, no training, no accommodation, or operations actively created barriers. Forces policy paragraph in complaint.'},
+  {key:'304',  label:'Barrier could be removed', hint:'Physical barrier readily achievable to fix. Forces §36.304 argument in complaint.'}
 ];
 
 function buildLegalScreen(){
