@@ -1,0 +1,18 @@
+{
+  "name": "ADA Field App",
+  "short_name": "ADA",
+  "description": "ADA compliance site documentation",
+  "start_url": "/ada-field-app/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#E8651A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
