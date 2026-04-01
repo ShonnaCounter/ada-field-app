@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>ADA Field App</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="Icon.png">
+<style>
+  :root { --orange:#E8651A; --orange-dim:#c45512; --black:#000000; --surface:#111111; --border:#222222; --text:#ffffff; --subtext:#f0b87a; }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:var(--black); color:var(--text); font-family:'Arial',sans-serif; font-size:18px; overflow:hidden; }
+  #app { height:100%; display:flex; flex-direction:column; }
+  .screen { display:none; flex-direction:column; height:100%; overflow:hidden; }
+  .screen.active { display:flex; }
+  .header { background:var(--black); padding:16px 20px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .header-top { display:flex; align-items:center; gap:12px; }
+  .back-btn { background:none; border:none; color:var(--orange); font-size:22px; cursor:pointer; padding:0 4px; line-height:1; }
+  .header h1 { font-size:20px; font-weight:700; color:var(--text); flex:1; }
+  .header .step { font-size:12px; color:var(--subtext); margin-top:4px; }
+  .scroll-body { flex:1; overflow-y:auto; padding:20px; -webkit-overflow-scrolling:touch; }
+  .footer { padding:16px 20px; background:var(--black); border-top:1px solid var(--border); flex-shrink:0; }
+  .next-btn { width:100%; background:var(--orange); color:var(--black); border:none; border-radius:8px; padding:16px; font-size:22px; font-weight:700; cursor:pointer; letter-spacing:0.5px; }
+  .next-btn:active { background:var(--orange-dim); }
+  .next-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .progress-bar { height:3px; background:var(--border); flex-shrink:0; }
+  .progress-fill { height:100%; background:var(--orange); transition:width 0.3s; }
+  .home-logo { text-align:center; padding:40px 20px 20px; }
+  .home-logo .logo-text { font-size:14px; font-weight:700; letter-spacing:3px; color:var(--orange); text-transform:uppercase; }
+  .home-logo .logo-sub { font-size:12px; color:var(--subtext); margin-top:4px; }
+  .home-buttons { padding:20px; display:flex; flex-direction:column; gap:16px; }
+  .home-new-btn { background:var(--orange); color:var(--black); border:none; border-radius:12px; padding:28px 20px; font-size:24px; font-weight:700; cursor:pointer; }
+  .home-new-btn:active { background:var(--orange-dim); }
+  .home-revisit-btn { background:var(--orange); color:var(--black); border:none; border-radius:12px; padding:20px; font-size:22px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .home-revisit-btn:active { background:var(--orange-dim); }
+  .badge { background:var(--black); color:var(--orange); border-radius:12px; padding:2px 8px; font-size:14px; font-weight:700; }
+  .field-label { font-size:14px; font-weight:700; color:var(--subtext); letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+  .text-input { width:100%; background:var(--black); border:2px solid var(--orange); border-radius:8px; padding:14px 16px; font-size:18px; color:var(--text); outline:none; caret-color:var(--orange); }
+  .text-input:focus { border-color:var(--orange); }
+  .text-input::placeholder { color:#444; }
+  textarea.text-input { min-height:80px; resize:vertical; font-size:18px; }
+  .tile-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tile-grid.three-col { grid-template-columns:1fr 1fr 1fr; }
+  .tile-wrap { position:relative; }
+  .tile { background:var(--surface); border:2px solid var(--border); border-radius:10px; padding:16px 12px; text-align:center; font-size:18px; font-weight:600; cursor:pointer; color:var(--text); transition:all 0.15s; line-height:1.3; width:100%; }
+  .tile:active { transform:scale(0.96); }
+  .tile.selected { background:var(--orange); border-color:var(--orange); color:var(--black); }
+  .tile-q-btn { position:absolute; top:4px; right:4px; background:none; border:1px solid var(--border); border-radius:50%; width:20px; height:20px; font-size:12px; color:var(--subtext); cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2; }
+  .tile-q-btn:active { border-color:var(--orange); color:var(--orange); }
+  .violation-row { border-bottom:1px solid var(--border); padding:14px 0; }
+  .violation-row:last-child { border-bottom:none; }
+  .v-main { display:flex; align-items:flex-start; gap:12px; }
+  .v-checkbox { width:28px; height:28px; border-radius:4px; border:2px solid var(--orange); background:var(--black); flex-shrink:0; margin-top:1px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .v-checkbox.checked { background:var(--orange); }
+  .v-checkbox.checked::after { content:'✓'; color:var(--black); font-size:16px; font-weight:700; }
+  .v-text { flex:1; }
+  .v-title { font-size:18px; font-weight:600; color:var(--text); line-height:1.3; }
+  .v-section { font-size:12px; color:var(--subtext); margin-top:2px; }
+  .v-q-btn { background:none; border:1px solid var(--border); border-radius:50%; width:20px; height:20px; font-size:12px; color:var(--subtext); cursor:pointer; flex-shrink:0; margin-top:2px; display:inline-flex; align-items:center; justify-content:center; }
+  .v-note-btn { background:var(--black); border:1px solid var(--orange); border-radius:6px; color:var(--orange); font-size:14px; font-weight:600; padding:5px 12px; cursor:pointer; white-space:nowrap; flex-shrink:0; margin-top:1px; }
+  .v-note-btn.open { background:var(--orange); color:var(--black); }
+  .note-toggle { margin-top:8px; margin-left:36px; display:none; }
+  .note-toggle.visible { display:block; }
+  .note-field { margin-top:6px; width:100%; background:var(--black); border:1px solid var(--orange); border-radius:6px; padding:8px 10px; font-size:18px; color:var(--text); caret-color:var(--orange); display:none; resize:vertical; min-height:60px; }
+  .note-field.visible { display:block; }
+  .intake-q { margin-bottom:20px; }
+  .intake-q .q-label { font-size:20px; font-weight:700; color:var(--text); margin-bottom:10px; line-height:1.3; }
+  .intake-q .q-hint { font-size:14px; color:var(--subtext); margin-bottom:10px; }
+  .pill-group { display:flex; gap:8px; flex-wrap:wrap; }
+  .pill { background:var(--surface); border:2px solid var(--border); border-radius:20px; padding:10px 18px; font-size:18px; font-weight:600; cursor:pointer; color:var(--text); }
+  .pill.selected { background:var(--orange); border-color:var(--orange); color:var(--black); }
+  .t2-toggle-row { display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:24px; }
+  .t2-toggle-label strong { display:block; font-size:18px; color:var(--text); margin-bottom:2px; }
+  .t2-toggle-label span { font-size:14px; color:var(--subtext); }
+  .toggle-switch { position:relative; width:48px; height:26px; flex-shrink:0; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; inset:0; background:#333; border-radius:26px; cursor:pointer; transition:0.2s; }
+  .toggle-slider:before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#666; border-radius:50%; transition:0.2s; }
+  input:checked + .toggle-slider { background:#1a3a6e; }
+  input:checked + .toggle-slider:before { transform:translateX(22px); background:#7eb3ff; }
+  .title2-extras-panel { background:#0a1525; border:1px solid #1a3a6e; border-radius:10px; padding:16px; margin-top:12px; display:none; }
+  .title2-extras-panel.visible { display:block; }
+  .t2-badge { display:inline-block; background:#1a3a6e; color:#7eb3ff; border-radius:6px; padding:3px 10px; font-size:12px; font-weight:700; margin-bottom:14px; }
+  .severity-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:10px; }
+  .sev-tile { background:var(--surface); border:2px solid var(--border); border-radius:8px; padding:10px 4px; text-align:center; cursor:pointer; }
+  .sev-tile .num { font-size:22px; font-weight:700; color:var(--text); }
+  .sev-tile .desc { font-size:11px; color:var(--subtext); margin-top:3px; line-height:1.2; }
+  .sev-tile.selected { border-color:var(--orange); background:#2a1500; }
+  .sev-tile.selected .num { color:var(--orange); }
+  .review-section { background:var(--surface); border-radius:10px; margin-bottom:12px; overflow:hidden; }
+  .review-section-header { padding:14px 16px; }
+  .review-section-title { font-size:14px; font-weight:700; color:var(--subtext); text-transform:uppercase; letter-spacing:0.5px; }
+  .review-section-body { padding:0 16px 14px; }
+  .review-item { font-size:16px; color:var(--text); padding:3px 0; line-height:1.4; }
+  .legal-theory-section { background:var(--surface); border-radius:10px; padding:16px; margin-bottom:12px; border:1px solid #333; }
+  .legal-theory-title { font-size:14px; font-weight:700; color:var(--subtext); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; }
+  .legal-theory-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+  .legal-theory-row:last-child { margin-bottom:0; }
+  .lt-checkbox { width:28px; height:28px; border-radius:4px; border:2px solid var(--orange); background:var(--black); flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .lt-checkbox.checked { background:var(--orange); }
+  .lt-checkbox.checked::after { content:'✓'; color:var(--black); font-size:16px; font-weight:700; }
+  .lt-text { flex:1; }
+  .lt-code { font-size:18px; font-weight:700; color:var(--orange); }
+  .lt-desc { font-size:14px; color:var(--subtext); margin-top:2px; line-height:1.4; }
+  .submit-area { text-align:center; padding:40px 20px; }
+  .submit-icon { font-size:60px; margin-bottom:20px; }
+  .submit-title { font-size:22px; font-weight:700; margin-bottom:10px; }
+  .submit-sub { font-size:16px; color:var(--subtext); margin-bottom:30px; line-height:1.5; }
+  .submit-btn { width:100%; background:var(--orange); color:var(--black); border:none; border-radius:8px; padding:18px; font-size:22px; font-weight:700; cursor:pointer; margin-bottom:12px; }
+  .submit-btn:active { background:var(--orange-dim); }
+  .reset-btn { width:100%; background:none; color:var(--subtext); border:1px solid var(--border); border-radius:8px; padding:14px; font-size:18px; cursor:pointer; }
+  .receipt-btn { flex:1; background:var(--black); border:2px solid var(--border); border-radius:8px; padding:12px 8px; font-size:16px; font-weight:600; color:var(--text); cursor:pointer; }
+  .receipt-btn.selected { background:var(--orange); border-color:var(--orange); color:var(--black); }
+  .section-label { font-size:14px; font-weight:700; color:var(--subtext); text-transform:uppercase; letter-spacing:1px; margin:20px 0 10px; }
+  .revisit-list { display:flex; flex-direction:column; gap:10px; }
+  .show-if-present-label { font-size:12px; font-weight:700; color:var(--subtext); text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px; padding-top:12px; border-top:1px solid var(--border); }
+  /* Modal */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:100; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.visible { display:flex; }
+  .modal-box { background:#1a1a1a; border:1px solid var(--orange); border-radius:12px; padding:20px; max-width:360px; width:100%; max-height:80vh; overflow-y:auto; }
+  .modal-title { font-size:28px; font-weight:700; color:var(--orange); margin-bottom:10px; }
+  .modal-body { font-size:26px; color:var(--text); line-height:1.6; }
+  .modal-close { margin-top:16px; width:100%; background:var(--orange); color:var(--black); border:none; border-radius:8px; padding:12px; font-size:30px; font-weight:700; cursor:pointer; }
+  /* Subcat section header */
+  .subcat-section-header { font-size:30px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px; padding-top:12px; border-top:1px solid var(--border); }
+  .subcat-section-header:first-child { margin-top:0; padding-top:0; border-top:none; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div class="screen active" id="s-home">
+  <div class="scroll-body" style="padding:0">
+    <div class="home-logo">
+      <div class="logo-text">ADA Field App</div>
+      <div class="logo-sub">Site Documentation</div>
+    </div>
+    <div class="home-buttons">
+      <button class="home-new-btn" onclick="startNewCase()">NEW CASE</button>
+      <button class="home-revisit-btn" onclick="goScreen('s-revisit-home')">
+        REVISITS <span class="badge" id="revisit-badge">0</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- BUSINESS NAME -->
+<div class="screen" id="s-name">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goHome()">←</button><h1>Business Name</h1></div>
+    <div class="step">Step 1 of 8</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:12%"></div></div>
+  <div class="scroll-body">
+    <div class="field-label">Name on the door</div>
+    <input class="text-input" id="inp-name" type="text" placeholder="e.g. Spires Restaurant" autocomplete="off" oninput="checkName()">
+    <div style="margin-top:12px;font-size:26px;color:var(--subtext);line-height:1.5">Use the name as it appears on signage or receipt.</div>
+    <div class="t2-toggle-row">
+      <div class="t2-toggle-label">
+        <strong>Title II — Government entity?</strong>
+        <span>DMV, parks, public transit, gov office</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="t2-toggle" onchange="toggleTitleII(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="title2-extras-panel" id="t2-panel">
+      <div class="t2-badge">TITLE II · 4 additional questions flagged for attorney</div>
+      <div class="intake-q">
+        <div class="q-label">Program or service accessed</div>
+        <textarea class="text-input" id="t2-program" placeholder="e.g. DMV driver's license renewal" style="min-height:60px"></textarea>
+      </div>
+      <div class="intake-q">
+        <div class="q-label">Accessible alternative on-site?</div>
+        <div class="pill-group">
+          <div class="pill" id="pill-alt-yes" onclick="setAlt('yes')">Yes</div>
+          <div class="pill" id="pill-alt-no" onclick="setAlt('no')">No</div>
+        </div>
+      </div>
+      <div id="t2-altdetail" style="display:none" class="intake-q">
+        <div class="q-label">How far out of your way — reasonable?</div>
+        <textarea class="text-input" id="t2-altdist" placeholder="Distance and reasonableness" style="min-height:60px"></textarea>
+      </div>
+      <div class="intake-q">
+        <div class="q-label">Did you speak to staff?</div>
+        <textarea class="text-input" id="t2-staff" placeholder="Informational only" style="min-height:60px"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><button class="next-btn" id="btn-name" disabled onclick="goScreen('s-type')">NEXT →</button></div>
+</div>
+
+<!-- ESTABLISHMENT TYPE -->
+<div class="screen" id="s-type">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goScreen('s-name')">←</button><h1>Establishment Type</h1></div>
+    <div class="step">Step 2 of 8 · Select all that apply</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:25%"></div></div>
+  <div class="scroll-body"><div class="tile-grid" id="type-grid"></div></div>
+  <div class="footer"><button class="next-btn" id="btn-type" disabled onclick="goScreen('s-date')">NEXT →</button></div>
+</div>
+
+<!-- DATE -->
+<div class="screen" id="s-date">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goScreen('s-type')">←</button><h1>Date of Visit</h1></div>
+    <div class="step">Step 3 of 8</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:37%"></div></div>
+  <div class="scroll-body">
+    <div class="field-label">Date of visit</div>
+    <input class="text-input" id="inp-date" type="date" oninput="state.date=this.value">
+    <div style="margin-top:10px;font-size:30px;color:var(--subtext)">Defaults to today. Change if visit was a different day.</div>
+  </div>
+  <div class="footer"><button class="next-btn" onclick="goScreen('s-reason')">NEXT →</button></div>
+</div>
+
+<!-- REASON -->
+<div class="screen" id="s-reason">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goScreen('s-date')">←</button><h1>Reason for Visit</h1></div>
+    <div class="step">Step 4 of 8 · Select all that apply</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+  <div class="scroll-body"><div id="reason-list"></div></div>
+  <div class="footer"><button class="next-btn" id="btn-reason" disabled onclick="goScreen('s-cats')">NEXT →</button></div>
+</div>
+
+<!-- VIOLATION CATEGORIES -->
+<div class="screen" id="s-cats">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goScreen('s-reason')">←</button><h1>Violation Categories</h1></div>
+    <div class="step">Step 5 of 8 · Select all that apply</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:62%"></div></div>
+  <div class="scroll-body"><div class="tile-grid three-col" id="cat-grid"></div></div>
+  <div class="footer"><button class="next-btn" id="btn-cats" disabled onclick="handleCatsNext()">NEXT →</button></div>
+</div>
+
+<!-- SUB-CATEGORY PICKER -->
+<div class="screen" id="s-subcats">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goScreen('s-cats')">←</button><h1 id="subcat-title">Sub-categories</h1></div>
+    <div class="step">Step 6 of 8 · Select all that apply</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:68%"></div></div>
+  <div class="scroll-body"><div class="tile-grid" id="subcat-grid"></div></div>
+  <div class="footer"><button class="next-btn" id="btn-subcats" disabled onclick="handleSubcatsNext()">NEXT →</button></div>
+</div>
+
+<!-- VIOLATION DRILLDOWN -->
+<div class="screen" id="s-violations">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="prevCat()">←</button><h1 id="viol-cat-title">Parking</h1></div>
+    <div class="step" id="viol-step">Category 1 of 3</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+  <div class="scroll-body" id="viol-body"></div>
+  <div class="footer"><button class="next-btn" onclick="nextCat()">NEXT →</button></div>
+</div>
+
+<!-- SITE NOTES -->
+<div class="screen" id="s-intake">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goScreen('s-violations')">←</button><h1>Site Notes</h1></div>
+    <div class="step">Step 7 of 8</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:87%"></div></div>
+  <div class="scroll-body">
+    <!-- Receipt -->
+    <div class="intake-q">
+      <div class="q-label">Receipt</div>
+      <div style="display:flex;gap:8px;">
+        <button class="receipt-btn" id="rcpt-none" onclick="setReceipt('none',this)">No Receipt</button>
+        <button class="receipt-btn" id="rcpt-photos" onclick="setReceipt('photos',this)">In Photos</button>
+        <button class="receipt-btn" id="rcpt-capture" onclick="captureReceipt()">📷 Capture</button>
+      </div>
+      <input type="file" id="receipt-cam" accept="image/*" capture="environment" style="display:none" onchange="handleReceiptCapture(this)">
+    </div>
+    <!-- Photos taken -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      <span class="q-label" style="margin:0;">Photos taken?</span>
+      <div style="display:flex;gap:8px;">
+        <div class="pill" id="pill-photos-yes" onclick="setPhotos(true)">Yes</div>
+        <div class="pill" id="pill-photos-no" onclick="setPhotos(false)">No</div>
+      </div>
+    </div>
+    <!-- Restroom inline -->
+    <div style="padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span class="q-label" style="margin:0;white-space:nowrap;">Restroom</span>
+        <div class="pill" onclick="setRestroom(this)">Women's</div>
+        <div class="pill" onclick="setRestroom(this)">Men's</div>
+        <div class="pill" onclick="setRestroom(this)">Unisex</div>
+        <div class="pill" onclick="setRestroom(this)">Family</div>
+        <div class="pill" onclick="setRestroom(this)">N/A</div>
+      </div>
+    </div>
+    <!-- Spoke To -->
+    <div class="intake-q">
+      <div class="q-label">Spoke To</div>
+      <div class="q-hint">Role/title · what was said · did they acknowledge?</div>
+      <textarea class="text-input" id="inp-spoke" placeholder="e.g. Manager — acknowledged door force, said 'we've been meaning to fix that'"></textarea>
+    </div>
+    <!-- Assistance Given inline -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      <span class="q-label" style="margin:0;">Assistance given?</span>
+      <div style="display:flex;gap:8px;">
+        <div class="pill" id="pill-assist-yes" onclick="setAssist(true)">Yes</div>
+        <div class="pill" id="pill-assist-no" onclick="setAssist(false)">No</div>
+      </div>
+    </div>
+    <textarea class="text-input" id="inp-assist" placeholder="What was offered — assistance is not compliance." style="display:none;margin-bottom:16px;"></textarea>
+    <!-- Who Was With Me -->
+    <div class="intake-q">
+      <div class="q-label">Who Was With Me</div>
+      <textarea class="text-input" id="inp-with" placeholder="e.g. Alone  ·  or  ·  Sister, Maria Counter"></textarea>
+    </div>
+    <!-- Did I Go Elsewhere inline -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      <span class="q-label" style="margin:0;">Did I go elsewhere?</span>
+      <div style="display:flex;gap:8px;">
+        <div class="pill" id="pill-else-yes" onclick="setElsewhere(true)">Yes</div>
+        <div class="pill" id="pill-else-no" onclick="setElsewhere(false)">No</div>
+      </div>
+    </div>
+    <textarea class="text-input" id="inp-elsewhere" placeholder="Where and why" style="display:none;margin-bottom:16px;"></textarea>
+    <!-- Additional Issues -->
+    <div class="intake-q">
+      <div class="q-label">Additional Issues</div>
+      <div class="q-hint">Compounding factors only. Leave blank if nothing compounds.</div>
+      <textarea class="text-input" id="inp-additional" placeholder="e.g. No ISA signage on restroom door."></textarea>
+    </div>
+    <!-- Severity -->
+    <div class="intake-q">
+      <div class="q-label">Severity</div>
+      <div style="display:flex;gap:12px;">
+        <button class="receipt-btn" id="sev-standard" onclick="setSeverity('standard',this)" style="flex:1;font-size:18px;padding:14px 8px;">Standard</button>
+        <button class="receipt-btn" id="sev-egregious" onclick="setSeverity('egregious',this)" style="flex:1;font-size:18px;padding:14px 8px;">Egregious</button>
+      </div>
+      <textarea class="text-input" id="inp-severity-note" placeholder="Why egregious? Describe the impact..." style="display:none;margin-top:10px;"></textarea>
+    </div>
+    <!-- Final Notes -->
+    <div class="intake-q">
+      <div class="q-label">Final Notes</div>
+      <textarea class="text-input" id="inp-notes" placeholder="Anything not captured above"></textarea>
+    </div>
+  </div>
+  <div class="footer"><button class="next-btn" onclick="goScreen('s-legal')">NEXT →</button></div>
+</div>
+
+<!-- LEGAL THEORY -->
+<div class="screen" id="s-legal">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goScreen('s-intake')">←</button><h1>Legal Theory</h1></div>
+    <div class="step">Select all that apply</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:92%"></div></div>
+  <div class="scroll-body" id="legal-body">
+    <div style="margin-bottom:12px;font-size:26px;color:var(--subtext);line-height:1.5">These flag the legal basis for the attorney. Select any that apply to this visit.</div>
+    <div id="legal-items"></div>
+  </div>
+  <div class="footer"><button class="next-btn" onclick="goScreen('s-review')">REVIEW →</button></div>
+</div>
+
+<!-- REVIEW -->
+<div class="screen" id="s-review">
+  <div class="header">
+    <div class="header-top"><button class="back-btn" onclick="goScreen('s-legal')">←</button><h1>Review</h1></div>
+    <div class="step">Step 8 of 8 · Confirm before sending</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width:95%"></div></div>
+  <div class="scroll-body" id="review-body"></div>
+  <div class="footer"><button class="next-btn" onclick="goScreen('s-submit')">LOOKS GOOD →</button></div>
+</div>
+
+<!-- SUBMIT -->
+<div class="screen" id="s-submit">
+  <div class="header"><div class="header-top"><h1>Submit Case</h1></div><div class="step">Done</div></div>
+  <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+  <div class="scroll-body">
+    <div class="submit-area">
+      <div class="submit-icon">📋</div>
+      <div class="submit-title" id="submit-biz-name">Ready to Send</div>
+      <div class="submit-sub">Tap below to open your email app. Everything is pre-filled. Just hit Send.</div>
+      <button class="submit-btn" onclick="sendEmail()">📧 OPEN EMAIL TO SEND</button>
+      <button class="reset-btn" onclick="goHome()">Start New Case</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVISIT HOME -->
+<div class="screen" id="s-revisit-home">
+  <div class="header"><div class="header-top"><button class="back-btn" onclick="goHome()">←</button><h1>Revisits</h1></div></div>
+  <div class="scroll-body">
+    <div class="section-label">Pending</div>
+    <div class="revisit-list">
+      <div style="color:var(--subtext);font-size:28px;padding:12px 0">No pending revisits. Claude populates this from your Yahoo inbox.</div>
+    </div>
+    <div class="section-label" style="margin-top:24px">Completed</div>
+    <div class="revisit-list">
+      <div style="color:var(--subtext);font-size:28px;padding:12px 0">No completed revisits yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body" id="modal-body"></div>
+    <button class="modal-close" onclick="closeModal()">Got it</button>
+  </div>
+</div>
+
+</div>
+<script>
+// ============================================================
+// VIOLATION DATA — COMPLETE REBUILD FROM HANDOFF v2
+// ============================================================
+
+const VIOLATIONS = {
+
+// ── PARKING (subcats: Spaces, Access Aisles, Signs, Surface & Markings, Clearance, Path of Travel, Loading Zone)
+"Parking — Parking Spaces":[
+  {s:"ADA §208 / CBC §11B-208.2.1 / CBC §11B-208.2.2 / HHS §84.22",v:"Not enough accessible spaces",q:"1–25 spaces: 1; 26–50: 2; 51–75: 3; 76–100: 4; 101–150: 5; 151–200: 6; 201–300: 7; 301–400: 8; 401–500: 9; 501–1000: 2% total. Hospital outpatient: 10% of patient/visitor spaces (CBC). Rehab/outpatient PT: 20% (CBC)."},
+  {s:"ADA §208.3.1",v:"Accessible spaces not dispersed among entrances",q:"Accessible spaces must be on the shortest accessible route to each accessible entrance. Clustering spaces at one entrance fails even if total count is correct."},
+  {s:"ADA §502.2 / CBC §11B-502.2",v:"Parking space too narrow",sub:["Standard space","Van accessible space"],notePrompt:"Which space and measured width?",q:"Standard: 96\" min (ADA) / 108\" min (CBC). Van: 132\" min (ADA) / 144\" min (CBC) or 96\" with 96\" aisle."}
+],
+"Parking — Access Aisles":[
+  {s:"ADA §502.3.1",v:"Access aisle too narrow",q:"Access aisle: 60\" min wide. Must adjoin accessible route."},
+  {s:"ADA §502.3.2",v:"Access aisle doesn't run full length of space",q:"Access aisle must equal full length of space served."},
+  {s:"ADA §502.3.3",v:"Access aisle obstructed",autoNote:true,notePrompt:"What is the obstruction?",q:"Access aisle must be unobstructed and marked. Trash cans, shopping carts, vehicles, signposts inside aisle are violations."},
+  {s:"ADA §502.3.4",v:"Access aisle overlaps vehicular travel lane",sub:["Overlaps travel lane","Passenger side of angled space"],notePrompt:"Describe location and configuration.",q:"Access aisles shall not overlap vehicular travel lanes. Angled van spaces: aisle must be on passenger side — driver-side aisle on angled space fails regardless of width."}
+],
+"Parking — Signs":[
+  {s:"ADA §216.5 / ADA §502.6 / CBC §11B-502.6.1 / ADA §36.211(a) / CBC §11B-108",v:"ISA sign — missing, too low, or obscured",sub:["No ISA sign at all","Sign too low","Sign obscured, defaced, or covered"],notePrompt:"Describe condition and location.",q:"ISA required. Sign bottom: 60\" min AFF. CBC: reflectorized, 70 sq in min, ISA white on blue. Obscured or defaced signs = ADA §36.211(a) / CBC §11B-108 failure to maintain."},
+  {s:"ADA §216.5",v:"Van accessible sign missing",q:"Van spaces must include 'Van Accessible' designation on sign or on separate sign below."},
+  {s:"CBC §11B-502.6.2",v:"Sign missing 'Minimum Fine $250'",q:"CBC requires 'Minimum Fine $250' text on sign or additional sign below ISA. No ADA equivalent."},
+  {s:"CBC §11B-502.8",v:"Tow-away warning sign missing or non-compliant",q:"Sign: 17\" wide × 22\" high min; lettering 1\" high min. Must state tow-away warning with vehicle reclaim info. Required at each facility entrance. No ADA equivalent."}
+],
+"Parking — Surface & Markings":[
+  {s:"ADA §502.4",v:"Surface slope exceeds 1:48 in any direction",q:"Parking spaces and access aisles: slope ≤1:48 in all directions for drainage only."},
+  {s:"ADA §502.4",v:"Uneven/Changes in Level",q:"No changes in level in parking spaces or access aisles other than permitted slope. (Cracks, heaving, or uneven blacktop)"},
+  {s:"CBC §11B-502.6.4",v:"No ISA pavement marking in space",q:"CBC: 36\"×36\" min; white or contrasting color; outlined in blue; ISA centerline ≤6\" from space centerline. No ADA equivalent."},
+  {s:"ADA §36.211(a) / CBC §11B-108",v:"Faded, overlapping, or illegible markings",q:"Accessible space markings must be in legible condition. Faded lines, overlapping old/new markings, or illegible ISA symbol = failure to maintain accessible feature."}
+],
+"Parking — Clearance":[
+  {s:"ADA §502.5 / CBC §11B-502.5",v:"Vertical clearance insufficient",q:"ADA: 98\" min at van spaces only. CBC: 98\" min at ALL accessible spaces including standard car spaces. Check garage entries and overhead structures."}
+],
+"Parking — Path of Travel":[
+  {s:"ADA §502.3 / ADA §208.3.1 / HHS §84.22",v:"No accessible route from space to entrance",q:"Accessible route must connect access aisle to accessible entrance. Must be on shortest path to entrance for HHS-funded medical facilities."},
+  {s:"ADA §502.3 / ADA §302.1",v:"Accessible route — uneven, cracked, or unstable surface",q:"Route from accessible space to entrance must be stable, firm, and slip-resistant. Cracks, heaving, blacktop-to-sidewalk level changes all qualify."},
+  {s:"ADA §502.7 / CBC §11B-502.7",v:"Route requires travel behind parked vehicles",q:"Accessible route from space to entrance shall not require travel behind other parked vehicles or across vehicular traffic lanes."}
+],
+"Parking — Loading Zone":[
+  {s:"ADA §503.1",v:"No accessible passenger loading zone",q:"Pull-up space: 96\" wide × 20' long min. Access aisle: 60\" wide × 20' long min. Vertical clearance: 114\" min."}
+],
+
+// ── PATH OF TRAVEL
+"Path of Travel — Exterior":[
+  {s:"ADA §403.5.1 / CBC §11B-403.5.1",v:"Exterior walk too narrow",q:"ADA: 36\" min. CBC: 48\" min exterior. Measure at narrowest point."},
+  {s:"ADA §403.3",v:"Running slope too steep",q:"1:20 max running slope. Steeper = ramp treatment required."},
+  {s:"ADA §403.3",v:"Cross slope too steep",q:"1:48 max. Note if chair pulled sideways or felt unstable."},
+  {s:"ADA §402.1",v:"Surface not firm and stable",q:"Stable, firm, slip-resistant — no loose gravel, soft dirt, sand, wood chips."},
+  {s:"ADA §303.3 / ADA §303.4",v:"Change in level not beveled or ramped",q:"¼\"–½\" change: must be beveled at 1:2 max. >½\": must be ramped at 1:12 max."},
+  {s:"ADA §302.1",v:"Surface opening too large",q:"Opening: ½\" max diameter. Elongated openings must run perpendicular to travel direction."},
+  {s:"ADA §307.2 / ADA §307.3",v:"Side Protruding Object",q:"Object protruding >4\" into path between 27\"–80\" AFF. Post-mounted objects: >12\" overhang between 27\"–80\" AFF. Both require guardrail with leading edge ≤27\" AFF."},
+  {s:"ADA §307.4",v:"Low Overhead Clearance",q:"80\" min overhead clearance. Door closers/stops: 78\" min. Requires barrier with leading edge ≤27\" AFF where clearance is deficient."},
+  {s:"CBC §11B-403.7",v:"No rest area on extended gradient",q:"CBC: level rest area required every 400' max on gradients between 1:20 and 1:12. ADA has no equivalent."}
+],
+"Path of Travel — Interior":[
+  {s:"ADA §403.5.1 / CBC §11B-403.5.1",v:"Interior corridor too narrow",q:"ADA: 36\" min. CBC: 44\" min serving 10+ occupants. Restaurants, retail, medical offices all qualify."},
+  {s:"ADA §206.2.1",v:"Accessible route doesn't reach all public areas",q:"Accessible route must connect all areas open to the public — restrooms, patios, mezzanines, outdoor seating, elevators, all functional areas."},
+  {s:"ADA §302.1 / ADA §302.2",v:"Carpet or mats — loose, unsecured, exposed edges",autoNote:true,notePrompt:"Describe: loose, bunched, exposed edge, unsecured? Location?",q:"Pile height: ½\" max. Firm cushion or no cushion. Securely attached. Check edges for tripping hazard."},
+  {s:"ADA §206.3 / ADA §206.7",v:"No accessible route between floors",q:"Multi-story building: accessible route required between floors. CBC: within 200' of stairs in buildings >10,000 sq ft per floor."},
+  {s:"ADA §36.211(a) / CBC §11B-108",v:"Accessible features not maintained",autoNote:true,notePrompt:"How long out of service? Alternative access provided?",q:"Broken elevator, blocked accessible route, inoperable lift = independent CBC violation. Note date, duration, and whether any alternative was provided."},
+  {s:"504 §29 U.S.C. §794 / 28 CFR §41.57(a)",v:"Federally funded program not accessible — program access obligation",q:"504 imposes full program access obligation. Applies to hospitals, clinics, social service agencies, schools receiving federal funds. Standard exceeds ADA's readily achievable barrier removal."},
+  {s:"504 §28 CFR §41.57(b)",v:"Federally funded entity failed to provide accessible alternate path",q:"When facility not fully accessible, must offer reassignment, home visits, alternate site, or structural modification. Refusal to provide ANY alternative = standalone 504 violation."},
+  {s:"504 §29 U.S.C. §794 / 45 CFR §84.74",v:"Federally funded recipient refused wheelchair entry",q:"Explicit refusal of wheelchair entry = standalone 504 violation. Document exact words, staff role, and location."},
+  {s:"HHS §45 CFR §84.22 / §84.23",v:"HHS-funded facility program inaccessible",q:"HHS-funded: Medicare/Medicaid, FQHCs, Title X, HHS grants. Program must be accessible when viewed in its entirety."}
+],
+
+// ── ENTRANCE / DOORS
+"Entrance":[
+  {s:"ADA §404.2.1 / ADA §404.3.7",v:"Only entry is revolving door or turnstile",q:"Revolving doors, revolving gates, and turnstiles are NOT part of an accessible route. An accessible door must be provided alongside."},
+  {s:"ADA §404.2.3",v:"Door clear opening too narrow",q:"32\" min clear width. 36\" min where opening >24\" deep. Measure with door open 90°. Double doors: at least one leaf must provide 32\" min clear width independently."},
+  {s:"ADA §404.2.4 / CBC §11B-404.2.4",v:"Maneuvering clearance insufficient",q:"Pull side: 18\" min latch side. Push side: 12\" min. Document if you couldn't get alongside the latch. CBC: no exceptions including hospital patient rooms."},
+  {s:"ADA §404.2.5",v:"Threshold too high",q:"½\" max. Existing altered thresholds: ¾\" max if beveled on both sides at 1:2 max."},
+  {s:"ADA §404.2.6",v:"Distance between doors in series too short",q:"48\" min plus width of any door swinging into the space. Common vestibule violation."},
+  {s:"ADA §404.2.7",v:"Door hardware non-compliant",q:"Must operate with closed fist: lever handles required, no round knobs. 34\"–48\" AFF. No tight grasp, pinch, or twist. 5 lbs max force."},
+  {s:"ADA §404.2.8.1",v:"Door closer too fast",q:"5 seconds min from 90° open to within 12° of latch."},
+  {s:"ADA §404.2.9",v:"Door too heavy",q:"Interior doors: 5 lbs max force. Fire doors exempt."},
+  {s:"ADA §404.2.10",v:"No smooth surface on push side",q:"Push side: smooth surface full width, floor to 10\" AFF."},
+  {s:"ADA §216.6 / 504 §29 CFR §32.28(b)",v:"No Sign to Accessible Entrance",q:"At every inaccessible entrance: directional sign required pointing to accessible entrance. Federally funded facilities: ISA required on accessible route from parking and transit stops."}
+],
+
+// ── RAMPS
+"Ramps":[
+  {s:"ADA §405.2",v:"Running slope too steep",q:"1:12 max running slope."},
+  {s:"ADA §405.3",v:"Cross slope too steep",q:"1:48 max cross slope."},
+  {s:"ADA §405.4",v:"Surface non-compliant",q:"Stable, firm, slip-resistant. No level changes other than running and cross slope."},
+  {s:"ADA §405.5 / CBC §11B-405.5",v:"Clear width too narrow",q:"ADA: 36\" min clear width between handrails. CBC: 48\" min. Ramps built to ADA width fail CBC."},
+  {s:"ADA §405.6",v:"Rise of single run too high",q:"30\" max rise per run."},
+  {s:"ADA §405.7.3 / CBC §11B-405.7.2",v:"Landing too short",q:"ADA: 60\" min landing length at top and bottom. CBC: bottom landing extends 72\" min in direction of ramp run."},
+  {s:"ADA §405.7.4 / CBC §11B-405.7.4",v:"Direction change landing too small",q:"ADA: 60\"×60\" at direction changes. CBC: 72\"×60\" at direction changes >30°."},
+  {s:"CBC §11B-405.7.5",v:"Door on landing reduces clearance",q:"Door fully open: may not reduce landing width >3\". Door in any position: may not reduce minimum landing dimension below 42\"."},
+  {s:"ADA §405.8",v:"Handrails missing",q:"Required on both sides where rise >6\"."},
+  {s:"ADA §505.3 / ADA §505.4 / ADA §505.10.1 / ADA §505.10.2",v:"Handrails — non-compliant",sub:["Wrong height","Wrong length or extension","Not continuous"],notePrompt:"Which issue — height measured, extension length, or where continuity breaks?",q:"Height: 34\"–38\" AFF. Extend 12\" horizontal beyond top. Extend to point below bottom nosing + 12\" horizontal. Continuous full length of ramp."},
+  {s:"ADA §405.9 / CBC §11B-405.9.2",v:"Edge protection missing",q:"ADA: extended surface 12\" beyond handrail or 4\" curb/barrier. CBC: physical curb or barrier required — extended surface alone insufficient."},
+  {s:"ADA §405.10",v:"Landing accumulates water",q:"Wet landings must be designed to prevent water accumulation."},
+  {s:"ADA §36.211(a) / CBC §11B-108",v:"Ramp not maintained",autoNote:true,notePrompt:"How long? Alternative access provided?",q:"Broken or blocked ramp = violation under both ADA §36.211(a) and CBC §11B-108."}
+],
+
+// ── RESTROOMS
+"Restrooms — Entry & Door":[
+  {s:"ADA §404.2.3",v:"Door clear opening too narrow",q:"32\" min clear width. Measure with door open 90°."},
+  {s:"ADA §404.2.7",v:"Door hardware — knob, pinch lock, twist",q:"Lever required — no round knobs. No pinch or twist lock. 34\"–48\" AFF. 5 lbs max."},
+  {s:"ADA §404.2.9",v:"Door too heavy",q:"Interior doors: 5 lbs max force."},
+  {s:"ADA §404.2.8.1",v:"Door closes too fast",q:"5 seconds min from 90° open to within 12° of latch."},
+  {s:"ADA §404.2.4",v:"Maneuvering clearance insufficient or obscured",q:"Pull side: 18\" min latch side. Push side: 12\" min. Document if you couldn't get alongside the latch. Obscured = trash cans, signage, or equipment in clearance zone."},
+  {s:"ADA §603.4",v:"Coat hook out of reach",q:"Forward reach: 15\"–48\" AFF. Over obstruction >20\" deep: 44\" max. Side reach: 48\" max."}
+],
+"Restrooms — Turning & Maneuvering":[
+  {s:"ADA §603.2.1",v:"No turning space",q:"60\" diameter min turning space (or T-turn) required within room."},
+  {s:"ADA §603.2.3",v:"Door swings into clearance",q:"Door must not swing into the required clear floor space alongside toilet. Swinging into turning space is permitted."},
+  {s:"ADA §604.3.2",v:"Clear floor space beside toilet for transfer insufficient",q:"Clear floor space required alongside toilet for wheelchair transfer. Single-occupancy restroom without stall — document here."},
+  {s:"ADA §604.3.1 / CBC §11B-604.3.2",v:"Maneuvering space in front of toilet insufficient",q:"ADA: 60\" min perpendicular from side wall; 56\" from rear wall. CBC adds 60\"×48\" maneuvering space in front of toilet. Single-occupancy restroom without stall — document here."}
+],
+"Restrooms — Stall":[
+  {s:"ADA §213.2",v:"No wheelchair accessible stall",q:"Every public restroom must have at least one wheelchair accessible stall."},
+  {s:"ADA §213.2",v:"No ambulatory accessible stall provided",q:"Where 6 or more total stalls: one ambulatory stall required. 35\"–37\" wide × 60\" deep min. Grab bars only on side walls."},
+  {s:"ADA §604.8.1.1 / CBC §11B-604.8.1.1",v:"Stall too narrow or too shallow",q:"60\" wide min. 56\" deep min (wall-hung toilet); 59\" deep min (floor-mounted). CBC out-swinging door: 60\"×48\" maneuvering space required in front of toilet."},
+  {s:"ADA §604.8.1.2",v:"Stall door non-compliant",sub:["Not self-closing","Latch non-compliant","Swings into stall area"],notePrompt:"Which issue?",q:"Must be self-closing. Pull on both sides near latch. Must not swing into minimum stall area. If approach is to latch side: 42\" min clearance required."},
+  {s:"ADA §604.8.1.4",v:"No toe clearance at partition",q:"Front and at least one side partition: 9\" min toe clearance AFF; 6\" min depth beyond partition face. Not required at front partition if stall >62\" deep (wall-hung) or >65\" (floor-mounted)."},
+  {s:"ADA §604.8.1.5 / ADA §604.5 / ADA §604.5.1 / ADA §604.5.2",v:"Grab bars — missing or non-compliant",sub:["Missing entirely","Side wall — wrong length or position","Rear wall — wrong length or position"],notePrompt:"Which bar, what was wrong — missing, wrong length, wrong height, wrong position?",q:"Both side wall AND rear wall grab bars required. Side bar: 42\" min long, begins ≤12\" from rear wall, extends ≥54\" from rear wall. Rear bar: 36\" min long, extends 12\" min to one side and 24\" min to other side of toilet centerline."},
+  {s:"ADA §604.2 / CBC §11B-604.2",v:"Toilet centerline wrong distance from wall",q:"ADA: 16\"–18\" from side wall. CBC: 17\"–18\". Toilet at 16\" passes ADA, fails CBC."},
+  {s:"ADA §604.3.1 / CBC §11B-604.3.2",v:"Clear floor space around toilet insufficient",q:"ADA: 60\" min perpendicular from side wall; 56\" from rear wall. CBC adds 60\"×48\" maneuvering space in front of toilet."},
+  {s:"ADA §604.4",v:"Toilet seat height wrong",q:"Seat top: 17\"–19\" AFF. Seat must not be spring-loaded to return to raised position."},
+  {s:"ADA §604.6 / CBC §11B-604.6",v:"Flush control — wrong side or non-compliant operation",sub:["Wrong side","Non-compliant operation"],notePrompt:"Wrong side — which side? Non-compliant — force required or grip type?",q:"Must be on open side of water closet. Non-compliant operation: 5 lbs max activation force — stiff push buttons fail §309.4. CBC: 44\" max AFF. No tight grasp or twist."},
+  {s:"ADA §604.7 / CBC §11B-604.7",v:"Toilet paper dispenser wrong position",q:"7\"–9\" in front of toilet centerline. Outlet: 15\"–48\" AFF. Not behind grab bars. CBC adds 15\" minimum — prevents floor-level dispensers."},
+  {s:"ADA §308.2.2",v:"Toilet seat cover dispenser over toilet — obstructed reach",q:"Dispenser mounted over toilet is an obstructed forward reach violation. Max 44\" AFF where counter/toilet depth >20\"."},
+  {s:"ADA §604.3.2",v:"Clear floor space beside toilet for transfer insufficient",q:"Clear floor space required for wheelchair transfer to toilet."}
+],
+"Restrooms — Sink & Fixtures":[
+  {s:"ADA §603.3",v:"Mirror too high",q:"Mirror above lavatory/counter: 40\" max AFF to bottom edge. Mirror not above lavatory: 35\" max AFF."},
+  {s:"ADA §606.2",v:"Lavatory lacks clear floor space",q:"30\"×48\" clear floor space for forward approach required."},
+  {s:"ADA §606.3",v:"Lavatory rim too high",q:"Rim or counter: 34\" max AFF."},
+  {s:"ADA §606.4 / ADA §309.4",v:"Faucet controls non-compliant",sub:["Non-compliant hardware","Metering too short","Too much force"],notePrompt:"Hardware type? Metering duration? Could you activate independently?",q:"No tight grasp, pinch, or twist. Lever handles and sensor faucets compliant. Hand-operated metering: stays open 10 seconds min. 5 lbs max activation force — document if you could not activate independently."},
+  {s:"ADA §606.5",v:"Exposed pipes not insulated",q:"Water supply and drain pipes under lavatory must be insulated or configured to protect against contact."},
+  {s:"ADA §308.2.2 / CBC §11B-603.5",v:"Soap/paper towel/hand dryer out of reach",q:"If counter below dispenser >20\" deep, max reach drops to 44\" — not 48\". CBC caps all restroom accessories at 40\" AFF — stricter than ADA's 48\"."},
+  {s:"ADA §225.2 / CBC §11B-603.4",v:"Medicine cabinet shelf too high",q:"CBC: ≤44\" AFF. ADA §225.2: fixed shelving must be within reach ranges — 48\" max AFF."}
+],
+"Restrooms — Shower & Tub":[
+  {s:"ADA §608.2.1",v:"Transfer shower non-compliant",q:"Interior: 36\"×36\" clear inside. Entry: 36\" min wide."},
+  {s:"ADA §608.2.2",v:"Roll-in shower non-compliant",q:"30\" min wide × 60\" min deep. Entry: 60\" min wide. 30\"×60\" clearance adjacent to opening."},
+  {s:"ADA §608.3.1",v:"Shower grab bars missing or non-compliant",q:"Transfer shower: grab bars across control wall and back wall to point 18\" from control wall."},
+  {s:"ADA §608.4",v:"No seat in transfer shower; no folding seat in hotel roll-in",q:"Seat required in transfer-type shower. Folding seat required in roll-in shower in hotel mobility rooms. Seat: 15\"–16\" deep, full width of shower wall, 17\"–19\" AFF."},
+  {s:"ADA §608.5.1 / ADA §309.4",v:"Shower controls — wrong position or too much force",sub:["Wrong position","Too much force"],notePrompt:"Wrong position — measured height and distance from seat? Too much force — estimated force required?",q:"Position: controls on side wall opposite seat, 38\"–48\" AFF, ≤15\" from centerline of seat toward opening. Force: 5 lbs max activation force per §309.4 — stiff knobs or valves fail regardless of position."},
+  {s:"ADA §608.6",v:"Shower spray unit hose too short or no on/off",q:"Handheld unit: 59\" min hose. Fixed and handheld positions. On/off non-positive shut-off. Water ≤120°F."},
+  {s:"ADA §608.7",v:"Shower threshold too high",q:"½\" max. Existing transfer shower: 2\" max where breaking slab is infeasible. Document: threshold height and whether any accommodation was offered."},
+  {s:"ADA §608.8",v:"Shower enclosure obstructs controls or transfer",q:"Glass door or fixed panel must not block reach to controls, spray unit, or transfer path to seat."},
+  {s:"ADA §607.2–§607.7",v:"Bathtub violations",autoNote:true,notePrompt:"Which issue: clear floor space, no seat, grab bars, controls, spray unit, or enclosure?",q:"Clear floor space: 30\" wide full length of tub. Seat: 15\"–16\" deep, 17\"–19\" AFF, removable or folding, full tub width. Grab bars: back wall two bars (33\"–35\" AFF and 8\"–10\" above rim), foot end wall (33\"–35\" AFF), head end wall (33\"–35\" AFF). Controls: on end wall between rim and grab bar. Spray unit: 59\" min hose. Enclosure: must not obstruct controls, spray, or transfer."}
+],
+"Restrooms — Locker Room":[
+  {s:"ADA §222.1",v:"No accessible locker room of each type",q:"5% min but no fewer than one of each type per cluster. In alterations: one per sex per level required where technically infeasible to provide more."},
+  {s:"ADA §803.2",v:"No turning space in locker room",q:"60\" diameter min turning space required within room."},
+  {s:"ADA §803.4 / ADA §903",v:"No bench or bench non-compliant",q:"Bench required: 42\" long min, 20\"–24\" deep, 17\"–19\" AFF. Back support: 42\" long min, extends 2\"–18\" above seat surface, within 2½\" of rear seat edge."},
+  {s:"ADA §803.5",v:"Hooks or shelves out of reach",q:"Coat hooks: forward reach 15\"–48\" AFF unobstructed; over obstruction >20\" deep: 44\" max. Side reach: 48\" max. Shelves: 40\"–48\" AFF."},
+  {s:"504 §45 CFR §84.22(a) / 28 CFR §41.57",v:"No accessible restroom for program participants",q:"Federally funded facilities: at least one accessible restroom per sex (or unisex) on accessible route. Document whether staff acknowledged no accessible restroom and whether any alternative was offered."},
+  {s:"HHS §45 CFR §84.22 / 28 CFR §41.57",v:"HHS-funded facility patient restroom not accessible",q:"Patient restrooms in HHS-funded facilities must comply with ADA 2010 Standards. At least one accessible restroom per sex on accessible route from all patient care areas. Document if patient had to ask for assistance or could not reach restroom independently."}
+],
+
+// ── ELEVATORS
+"Elevators":[
+  {s:"ADA §407.2.1.1 / ADA §407.2.1.2 / ADA §407.2.1.3 / CBC §11B-407.2.1",v:"Call buttons — non-compliant",sub:["Out of reach","Too small","Clear floor space obstructed or insufficient"],notePrompt:"Which issue — height, size, or what is blocking the clear floor space?",q:"Reach: within reach ranges per §308. Existing: 54\" max to centerline of highest button. Size: ¾\" min in smallest dimension. Clear floor space: 30\"×48\" min centered on call button. CBC: raised buttons required — flush buttons not permitted."},
+  {s:"ADA §407.3.3 / ADA §407.3.5 / ADA §407.4.3",v:"Doors — non-compliant",sub:["No reopening device","Doors don't stay open long enough","Gap between car and landing too large"],notePrompt:"Which issue?",q:"Reopening device: activates at 5\" and 29\" AFF, no physical contact required, effective 20 seconds min. Stay open: 3 seconds min fully open after car call. Gap: 1¼\" max between car and landing."},
+  {s:"ADA §407.4.4 / ADA §407.4.6.1 / CBC §11B-407.4.6.2 / CBC §11B-407.4.10 / CBC §11B-407.4.1",v:"Car interior — non-compliant",sub:["Doesn't self-level","Car controls out of reach","No support rail","Car too small"],notePrompt:"Which issue?",q:"Self-level: within ½\" tolerance under all load conditions. Controls: ADA reach ranges; CBC requires raised mechanical buttons with square shoulders, ¾\" min, raised 1/8\" — flush touch-screen panels fail CBC. Support rail: CBC only — top of rail 31\"–33\" AFF, withstands 250 lbs. Car size: 18 sq ft min, 54\" min depth, 48\" min width (CBC)."},
+  {s:"ADA §36.211(a) / CBC §11B-108",v:"Out of service — not maintained",autoNote:true,notePrompt:"How long out of service? Alternative access provided?",q:"CBC: accessible features must be maintained in operable working condition. Broken elevator with no alternative = independent violation under both ADA §36.211(a) and CBC §11B-108."}
+],
+
+// ── DRINKING FOUNTAINS
+"Drinking Fountains":[
+  {s:"ADA §211.1 / CBC §11B-602.1",v:"Only one height fountain — no wheelchair accessible unit",q:"ADA: where fountains provided, at least one must be wheelchair accessible. CBC: BOTH wheelchair height AND standing height unit required per floor. Missing either = violation."},
+  {s:"ADA §602.4",v:"Spout too high",q:"Spout outlet: 36\" max AFF."},
+  {s:"ADA §602.5",v:"Spout too far from front edge",q:"Spout: ≤5\" from front edge; ≥15\" from vertical support."},
+  {s:"ADA §602.6",v:"Water flow too low",q:"Flow: 4\" min high. Allows cup insertion for users who cannot drink directly."},
+  {s:"ADA §602.2",v:"Clear floor space insufficient",q:"30\"×48\" min for forward approach with knee and toe clearance."},
+  {s:"CBC §11B-305.7.1",v:"Fountain protrudes into path — not recessed",q:"CBC: fountain must be completely within alcove or between wing walls. Alcove: 32\" min wide × 18\" min deep (36\" wide if depth >24\"). ADA requires fountains not protrude but does not require alcoves — CBC adds specific dimensions."}
+],
+
+// ── PLATFORM LIFTS
+"Platform Lifts":[
+  {s:"ADA §410.1",v:"Requires attendant — not independently usable",autoNote:true,notePrompt:"Did you have to ask for assistance? How long did you wait? Was the lift locked or key-operated?",q:"Platform lifts must provide unassisted entry and exit. Key-operated, locked, or staff-assisted lifts are non-compliant."},
+  {s:"ADA §410.4",v:"Gap between lift and landing too large",q:"1¼\" max."},
+  {s:"ADA §410.6",v:"Door or gate too narrow",q:"End doors/gates: 32\" min. Side doors/gates: 42\" min. Must remain open 20 seconds min."},
+  {s:"ADA §36.211(a) / CBC §11B-108",v:"Out of service — not maintained",autoNote:true,notePrompt:"How long out of service? Alternative access provided?",q:"CBC: accessible features must be maintained in operable working condition. Broken or locked = violation under both ADA §36.211(a) and CBC §11B-108."}
+],
+
+// ── SAUNAS / STEAM ROOMS
+"Saunas / Steam Rooms":[
+  {s:"ADA §241",v:"No accessible sauna or steam room",q:"At least one of each type must be accessible. Where clustered: 5% min but no fewer than one per cluster."},
+  {s:"ADA §612.3",v:"Turning space insufficient",q:"60\" diameter turning space required within sauna/steam room."},
+  {s:"ADA §36.211(a) / CBC §11B-108",v:"Out of service — not maintained",autoNote:true,notePrompt:"How long out of service? Alternative access provided?",q:"Broken or locked sauna/steam room with no alternative = violation under both ADA §36.211(a) and CBC §11B-108."}
+],
+
+// ── ATM / KIOSK
+"ATM / Kiosk":[
+  {s:"ADA §220.1",v:"No accessible ATM or kiosk of each type",q:"§707 requires accessible ATMs: reach ranges, visible screen, operable controls, clear floor space. At least one of each type required — interior and exterior count separately."},
+  {s:"ADA §707.7.1",v:"Screen not visible from wheelchair",q:"Screen must be visible from 40\" AFF at center of clear floor space in front of machine. If you have to strain, lean, or ask staff to read it — document it."},
+  {s:"ADA §707.2 / ADA §707.3",v:"Operable parts out of reach",q:"Controls and keypad: 15\"–48\" AFF forward reach. Over obstruction >20\" deep: 44\" max. Side reach: 48\" max. Document: control height and whether reachable from seated position."},
+  {s:"ADA §305.2 / ADA §307.5",v:"Clear floor space obstructed or insufficient",autoNote:true,notePrompt:"What is the obstruction?",q:"30\"×48\" min clear floor space required. Obstructions reduce required clear width."},
+  {s:"ADA §230.1",v:"Drive-through or parking kiosk intercom not accessible",q:"Intercom / call box: 48\" max AFF forward reach. Drive-through: 54\" max AFF where reach depth ≤10\". Controls: one hand, 5 lbs max. Note height and whether reachable from wheelchair seated position."},
+  {s:"ADA §228.1 / ADA §309.3 / ADA §36.302(a) / ADA §36.304",v:"Parking gate or ticket dispenser not accessible",autoNote:true,notePrompt:"Control height? Could you reach it? Any call button or staff procedure? What did staff say?",q:"Controls: 48\" max AFF forward reach. Drive-through: 54\" max AFF where depth ≤10\". Document: control height, your seated height, whether you could reach it. No call button or staff procedure available = operational policy failure."}
+],
+
+// ── POLICY ISSUES
+"Policy Issues — Features Blocked":[
+  {s:"ADA §36.211(a) / CBC §11B-108 / ADA §36.302(a)",v:"Accessible feature blocked or misused — operational failure",autoNote:true,notePrompt:"What was blocking what? What did staff say?",q:"Trash cans, chairs, storage, merchandise, or equipment blocking access aisles, maneuvering clearances, accessible parking, or accessible seating. Lowered counter assigned to non-accessible register. ADA table placed in inaccessible configuration. Feature exists but operations make it unusable."}
+],
+"Policy Issues — Staff Conduct":[
+  {s:"ADA §36.302(a) / ADA §36.301(a) / 504 §28 CFR §41.51(b)(1)",v:"Staff refused accessible service or seated incorrectly",autoNote:true,notePrompt:"What did you ask for? What did staff say? What happened? Staff role?",q:"Staff refused lowered counter because of register assignment. Hostess seated at inaccessible table. Told to stay in wheelchair. Paraded past accessible seating. Eventually accommodated after repeated requests still counts — document the resistance, not just the outcome. Remediation typically requires proof of staff training, posted ADA policy, or written procedure."}
+],
+
+// ── COUNTERS & REACH (universal)
+"Counters & Reach":[
+  {s:"ADA §904.4.1 / ADA §904.4.2 / ADA §227.3 / CBC §11B-904.4.1 / CBC §11B-904.4.2",v:"Counter height — non-compliant",sub:["No lowered section","No knee clearance for forward approach","No accessible counter of each type"],notePrompt:"Which counter, which issue, measured height?",q:"Order/service counter lowered section: 36\" long min, 36\" max AFF (ADA) or 34\" max (CBC). Knee clearance for forward approach: 27\" high × 30\" wide × 19\" deep. At least one of each type accessible — order, pickup, returns, customer service each count separately."},
+  {s:"ADA §904.3.2 / ADA §227.2",v:"Checkout aisle — non-compliant",sub:["Counter too high","Not enough accessible aisles"],notePrompt:"Counter height measured? How many aisles total, how many accessible?",q:"Checkout aisle counter: 38\" max AFF. Edge protection: 2\" max above counter on aisle side. Accessible aisles required: 1–4 aisles: 1; 5–8: 2; 9–15: 3; 16+: 4. Selling space <5,000 sq ft: no more than 1 required."},
+  {s:"ADA §707.7.1",v:"POS screen not visible from wheelchair",q:"Payment terminal screen must be readable from seated position at 40\" AFF. If you have to strain, lean, or ask staff to read it — document it."},
+  {s:"ADA §904.5.1 / CBC §11B-227.4",v:"Self-serve items out of reach — condiments, buffet, dispensers",autoNote:true,notePrompt:"Which item — soda, condiments, cups, napkins, lids, straws, food bar item?",q:"Forward reach: 15\"–48\" AFF unobstructed. Over obstruction >20\" deep: 44\" max. Side reach: 48\" max. CBC: 50% min but no fewer than one of each type must comply."},
+  {s:"ADA §308.2.1",v:"Forward reach too high — controls, dispensers, switches",autoNote:true,notePrompt:"What item — light switch, thermostat, intercom, dispenser?",q:"High reach: 48\" max AFF. Low reach: 15\" min AFF. Applies to dispensers, controls, outlets, operable parts."},
+  {s:"ADA §308.2.2",v:"Dispenser over counter out of reach",q:"If counter below dispenser >20\" deep, max reach drops to 44\" — not 48\". Measure: (1) dispenser control height AFF, (2) counter depth below it, (3) whether reachable from seated position."},
+  {s:"ADA §308.2.2",v:"Forward reach over obstruction too high",autoNote:true,notePrompt:"What item and what is the obstruction?",q:"Depth ≤20\": high reach 48\" max. Depth >20\" (max 25\"): high reach 44\" max."},
+  {s:"ADA §308.3.1",v:"Side reach too high",autoNote:true,notePrompt:"What item?",q:"High side reach: 48\" max AFF."},
+  {s:"ADA §308.3.2",v:"Side reach over obstruction too high",autoNote:true,notePrompt:"What item and what is the obstruction?",q:"Obstruction height: 34\" max; depth: 24\" max. Reach: 48\" max at depth ≤10\"; 46\" max at depth ≤24\"."},
+  {s:"ADA §305.2 / ADA §307.5",v:"Clear floor space at counter obstructed or insufficient",autoNote:true,notePrompt:"What is the obstruction?",q:"30\"×48\" min. Obstruction reduces required clear width."}
+],
+
+// ── DINING (restaurant establishment type)
+"Dining":[
+  {s:"ADA §226.1 / CBC §11B-226.1",v:"Insufficient Seating: Amount/Style",sub:["None at all","Less than 5% overall","Not in each area","Not each seating style"],notePrompt:"Which area (patio, dining room, bar) or which style (tables, booths, bar seating) was deficient?",q:"ADA: 5% min facility-wide. CBC: 5% per functional seating area — patio, dining room, bar each separate. Tables, booths, and bar seating each counted independently. Select all that apply."},
+  {s:"ADA §902.3",v:"Accessible table height wrong or knee clearance insufficient",q:"Table surface: 28\"–34\" AFF. Knee clearance: 27\" high × 30\" wide × 19\" deep. Toe clearance: 9\" high × 17\" deep."},
+  {s:"ADA §904.4.1 / ADA §904.4.2 / CBC §11B-226.3",v:"Bar or high counter lacks lowered section",q:"ADA: at least one accessible section — 36\" long, ≤36\" AFF. CBC: any bar or drink counter over 34\" high must have 60\" lowered section at 28\"–34\" with knee clearance beneath. Applies to bars, brewery counters, and food service counters."},
+  {s:"ADA §904.5.1 / CBC §11B-227.4",v:"Self-serve items out of reach — food line, buffet, condiment station",q:"Forward reach: 15\"–48\" AFF unobstructed. Over obstruction >20\" deep: 44\" max. Side reach: 48\" max. CBC: 50% min but no fewer than one of each type must comply."},
+  {s:"ADA §904.5.2 / CBC §11B-904.5.2",v:"Tray slide height out of range",q:"Tray slides: 28\"–34\" AFF. Violation almost always too high."}
+],
+
+// ── ASSEMBLY / VENUES (Theater + Stadium merged)
+"Assembly / Venues":[
+  {s:"ADA §221.2.1",v:"Not enough wheelchair spaces",q:"4–25 seats: 1; 26–50: 2; 51–150: 4; 151–300: 5; 301–500: 6; 501–5000: 6 + 1 per 150 over 500; 5001+: 36 + 1 per 200 over 5000."},
+  {s:"ADA §221.2.2",v:"Wheelchair spaces segregated or not part of seating plan",q:"Wheelchair spaces must be within footprint of seating area. Not isolated in corners or separate sections."},
+  {s:"ADA §221.2.3",v:"Wheelchair spaces have inferior sightlines or not dispersed",q:"Lines of sight equivalent or better than general seating. Dispersed horizontally and vertically. Venues ≤300 seats: vertical dispersion not required if spaces in 2nd or 3rd quartile."},
+  {s:"ADA §221.3",v:"No companion seat alongside wheelchair space",q:"At least one companion seat per wheelchair space. Shoulder-aligned with wheelchair space."},
+  {s:"ADA §802.1.2 / ADA §802.1.3",v:"Wheelchair space too narrow or too shallow",q:"Single space: 36\" min wide. Two adjacent: 33\" each min. Front/rear entry: 48\" min deep. Side-entry: 60\" min deep."},
+  {s:"ADA §221.4",v:"Aisle seats lack folding armrests",q:"5% min of aisle seats closest to accessible routes: folding/retractable armrests on aisle side."},
+  {s:"DOJ §36.302(f)",v:"Venue would not sell contiguous companion seats",autoNote:true,notePrompt:"Were contiguous seats available? Were you separated from your group?",q:"Up to 3 contiguous companion seats in same row must be available when purchasing accessible seating. If unavailable, nearest available seats must be offered. Applies where venue generally sells 4 or more tickets."}
+],
+
+// ── RETAIL (establishment type — unique violations)
+"Retail — Shelving & Displays":[
+  {s:"ADA §227.2",v:"Shelving or displays block accessible route",q:"Route through shelving: 36\" min width (ADA), 44\" min (CBC, 10+ occupants). Note where merchandise, fixtures, or displays narrow or block route."},
+  {s:"ADA §225.2",v:"Items on fixed shelving out of reach",q:"Fixed storage and shelving outside reach ranges. Forward reach: 15\"–48\" AFF unobstructed; 44\" max where obstruction depth >20\". Side reach: 48\" max. Fixed retail shelving only — not freestanding gondolas."}
+],
+"Retail — Fitting Rooms":[
+  {s:"ADA §222.1",v:"Fitting room door too narrow",q:"32\" min clear opening. 5% min but no fewer than one of each type per cluster."},
+  {s:"ADA §803.2",v:"No turning space inside fitting room",q:"60\" diameter min turning space required within room."},
+  {s:"ADA §803.4 / ADA §903",v:"No bench or bench non-compliant",q:"Bench: 42\" long min, 20\"–24\" deep, 17\"–19\" AFF. Back support required: 42\" long min, extends 2\"–18\" above seat surface."},
+  {s:"ADA §803.5",v:"Coat hooks or shelves out of reach",q:"Hooks: within reach ranges per §308. Shelves: 40\"–48\" AFF."}
+],
+"Retail — Mailbox / Packages":[
+  {s:"ADA §228.1",v:"Mailbox or package slot out of reach",q:"Operable parts: 15\"–48\" AFF forward reach, 48\" max side reach. Mail slots, package lockers, dropboxes. Drive-up only depositories exempt."}
+],
+
+// ── HOTEL (unique violations only)
+"Hotels":[
+  {s:"ADA §224.2",v:"Not enough accessible guest rooms",q:"1–25 rooms: 1; 26–50: 2; 51–75: 3; 76–100: 4; 101–150: 5; 151–200: 6; 201–300: 7; 301–400: 8; 401–500: 9; 501–1000: 2% total; 1001+: 20 + 1 per 100 over 1000."},
+  {s:"ADA §224.2",v:"Not enough roll-in shower rooms",q:"1–25 rooms: 0; 26–50: 1; 51–75: 1; 76–100: 1; 101–150: 2; 151–200: 2; 201–300: 3; 301–400: 4; 401–500: 4; 501–1000: 1% total; 1001+: 10 + 1 per 100 over 1000."},
+  {s:"ADA §230.1",v:"Call box at entry not accessible",q:"Intercom or call box operable parts: 15\"–48\" AFF. Clear floor space: 30\"×48\". One hand, 5 lbs max force."},
+  {s:"ADA §224.5",v:"Accessible rooms not dispersed among room types",q:"Mobility and communication rooms must be dispersed among various classes with comparable choices — bed sizes, views, amenities."}
+],
+
+// ── MEDICAL (unique violations only)
+"Medical":[
+  {s:"ADA §208.3.1 / HHS §84.22",v:"No accessible parking on shortest path to entrance",q:"Accessible parking must be on shortest path to accessible entrance — not just anywhere in lot. Measure or estimate distance from accessible space vs. nearest non-accessible space."},
+  {s:"HHS §45 CFR §84.22 / 504 §45 CFR §84.22(a)",v:"Patient restroom not accessible or not on accessible route",q:"At least one accessible restroom per sex on accessible route from all patient care areas. Document if you had to ask for assistance to reach restroom or could not reach it independently."},
+  {s:"504 §29 U.S.C. §794 / 28 CFR §41.57(a)",v:"Program or service not accessible when viewed in its entirety",q:"504 imposes full program access. Applies to Medicare, Medicaid, FQHC, HHS grant recipients. Document every barrier from parking through patient care."},
+  {s:"504 §28 CFR §41.57(b)",v:"Staff refused alternate access when primary route blocked",autoNote:true,notePrompt:"What was the barrier? What alternative was offered? What did staff say?",q:"When barrier exists, staff must offer alternative — reassignment, accessible entrance, home visit. Refusal to provide ANY alternative = standalone 504 violation. Document exact words and staff role."},
+  {s:"504 §29 U.S.C. §794 / 45 CFR §84.74",v:"Staff refused entry to wheelchair",autoNote:true,notePrompt:"Exact words? Staff role? Location?",q:"Explicit refusal of wheelchair entry = standalone 504 violation. Document exact words, staff role, and location."},
+  {s:"504 §29 U.S.C. §794 / HHS §45 CFR §84.22 / ADA §36.302(a)",v:"Exam table not height-adjustable — cannot transfer",autoNote:true,notePrompt:"Table height? Lift available? Were staff trained? What did staff say?",q:"EITHER height-adjustable table (lowering to 17\"–19\" AFF min) OR Hoyer/equivalent lift with fully trained staff immediately available. Staff must be qualified, trained, and immediately available — explicit HHS 504 Final Rule (2024) requirement. Staying in wheelchair is not compliant. Deadline: July 8, 2026."},
+  {s:"504 §29 U.S.C. §794 / HHS §45 CFR §84.22 / ADA §36.302(a)",v:"No patient lift available for transfer",autoNote:true,notePrompt:"Did you ask for a lift? What did staff say?",q:"Where patient cannot independently transfer, patient lift or ceiling track lift must be available. Absence compounds exam table violation."},
+  {s:"ADA §304.3.1 / ADA §604.3.1 / 504 §29 U.S.C. §794",v:"Exam room too small — insufficient space to turn or position alongside table",autoNote:true,notePrompt:"Could you turn around? Could you position alongside table?",q:"60\" clear turning space required. Clear floor space alongside exam table: 60\" min. Document if you had to back up or could not position alongside table."},
+  {s:"504 §29 U.S.C. §794 / HHS §45 CFR §84.22 / ADA §36.302(a)",v:"Accessible scale not available — cannot be weighed in wheelchair",autoNote:true,notePrompt:"Any alternative offered? What did staff say?",q:"Wheelchair-accessible platform scale required where weight is standard care. Absence = denied routine diagnostic measurement. Deadline: July 8, 2026."},
+  {s:"504 §29 U.S.C. §794 / HHS §45 CFR §84.22 / ADA §36.302(a)",v:"Imaging or X-ray equipment not accessible from wheelchair",autoNote:true,notePrompt:"What procedure? What did staff say? Was anything skipped or compromised?",q:"Imaging/scanning equipment must be usable from wheelchair or accessible alternative available. Document: what procedure, what equipment, what was skipped or compromised."},
+  {s:"504 §29 U.S.C. §794 / HHS §45 CFR §84.22 / ADA §36.302(a)",v:"Mammography equipment not accessible from wheelchair",autoNote:true,notePrompt:"Exam attempted? Completed? Skipped? What did staff say?",q:"Accessible mammography units must lower and rotate to reach seated patient. Document: whether exam was attempted, completed, or skipped, and what staff said."}
+],
+
+// ── GYMS (unique violations only)
+"Gyms":[
+  {s:"ADA §236.1",v:"No accessible exercise equipment of each type",q:"At least one of each type: treadmill, rowing, weight machine, elliptical, stationary bike — each type counted separately. Accessible route, 30\"×48\" clear floor space, operable parts 15\"–48\" AFF."},
+  {s:"ADA §305.2",v:"Clear floor space at equipment obstructed or insufficient",q:"30\"×48\" min. Measure from machine to nearest obstruction."}
+],
+
+// ── SALONS (unique violations only)
+"Salons":[
+  {s:"ADA §226.1 / ADA §902.3",v:"No accessible styling station or chair",autoNote:true,notePrompt:"What did staff say? Were you able to be served?",q:"At least one styling station accessible — adjustable chair or space to remain in wheelchair. Surface: 28\"–34\" AFF. Knee clearance: 27\" high × 30\" wide × 19\" deep."},
+  {s:"ADA §902.3",v:"Shampoo bowl not accessible",q:"Shampoo bowl: 28\"–34\" AFF, knee clearance beneath, clear floor space for forward approach."}
+],
+
+// ── SPA (unique violations only)
+"Spa":[
+  {s:"ADA §36.302(a) / 504 §29 U.S.C. §794",v:"Treatment table not accessible — cannot transfer",autoNote:true,notePrompt:"Table height? Lift available? What did staff say?",q:"Target height: 17\"–19\" AFF per §903 bench standards. Document: table height, whether lift available, what staff said."},
+  {s:"ADA §304.3.1",v:"Treatment room too small",q:"60\" turning space required. Clear floor space alongside table: 60\" min."}
+],
+
+// ── LAUNDROMAT — MACHINES (unique tile)
+"Machines":[
+  {s:"ADA §308.2.1",v:"Washer or dryer controls out of reach",q:"Controls: 15\"–48\" AFF. 44\" max over obstruction >20\" deep. Note machine type and control height."},
+  {s:"ADA §308.2.1",v:"Washer or dryer drum opening out of reach",q:"Drum opening: 48\" max AFF. Note top-load or front-load and opening height."},
+  {s:"ADA §611.2",v:"No clear floor space for parallel approach",q:"30\"×48\" clear floor space for parallel approach required, centered on machine."},
+  {s:"ADA §611.3",v:"Machine controls require tight grasping",q:"Doors, lint screens, detergent compartments: one-hand operation, no tight grasp/pinch/twist, 5 lbs max force."},
+  {s:"ADA §611.4",v:"Machine door opening height non-compliant",q:"Top-loading: door to compartment ≤36\" AFF. Front-loading: bottom of opening 15\"–36\" AFF."},
+  {s:"ADA §902.3",v:"Folding table not accessible from wheelchair",q:"Work surface: 28\"–34\" AFF with knee and toe clearance for forward approach."}
+],
+
+// ── GAS STATION (unique violations only)
+"Gas Station":[
+  {s:"ADA §228.1",v:"Fuel dispenser controls out of reach",q:"Controls: 54\" max AFF on existing curb installations. 48\" max new construction. Note height of buttons, card reader, and receipt slot."},
+  {s:"ADA §230.1",v:"No call button or intercom for assistance",q:"Call button or intercom: 15\"–48\" AFF. Clear floor space: 30\"×48\". One hand, 5 lbs max force."}
+],
+
+// ── BANKS (unique violations only)
+"Banks":[
+  {s:"ADA §230.1",v:"Call box not accessible",q:"Intercom or call box: 48\" max AFF forward reach. Drive-through: 54\" max AFF where depth ≤10\". Power chair seat heights 20\"–22\" AFF make controls below 22\" unreachable. Document: control height AFF, seated position height, whether you could reach it — even within ADA stated range."},
+  {s:"ADA §228.1",v:"Mailbox or package slot out of reach",q:"Operable parts: 15\"–48\" AFF forward reach, 48\" max side reach. Safe deposit boxes, mail slots, dropboxes."}
+],
+
+// ── STORAGE (unique violations only)
+"Storage":[
+  {s:"ADA §227.1",v:"No accessible route to storage units",q:"Accessible route to all accessible units. 36\" min width (ADA), 44\" min (CBC). Note narrow aisles, level changes, or surface issues."},
+  {s:"ADA §225.2.1",v:"No accessible storage units provided",q:"5% min but no fewer than one of each type — full-size, half-size, climate controlled each separate. Accessible unit: accessible route, clear floor space, operable latch within reach range."},
+  {s:"ADA §811.3 / ADA §309.3",v:"Storage unit latch or lock out of reach",q:"Latch and lock: 15\"–48\" AFF forward reach. 44\" max over obstruction >20\" deep. One hand, 5 lbs max, no tight grip or twist."}
+],
+
+// ── OUTDOOR & RECREATION SUBCATS
+"Bowling":[
+  {s:"ADA §206.2.11 / ADA §303.4",v:"Lane approach not accessible — lip or level change",autoNote:true,notePrompt:"Lip height? Ramp provided? If yes — slope compliant?",q:"5% min but no fewer than one lane on accessible route. Level change >½\" requires ramp: 1:12 max slope, 36\" min wide. Measure lip height."},
+  {s:"ADA §308.2.1",v:"Ball return out of reach",q:"Controls: 15\"–48\" AFF forward reach. Note height of ball return opening and controls."},
+  {s:"ADA §902.3",v:"Lane seating not accessible",q:"Surface: 28\"–34\" AFF. Knee clearance: 27\" high × 30\" wide × 19\" deep."}
+],
+"Golf":[
+  {s:"ADA §238.2.1",v:"Teeing ground not accessible by golf car",q:"All teeing grounds must allow golf car entry/exit. Min: forward tee accessible. Existing courses: forward tee not required where terrain makes compliance infeasible."},
+  {s:"ADA §238.2.2",v:"Putting green not accessible by golf car",q:"Every putting green must allow golf car entry/exit. Note whether car can reach green and whether surface permits entry."},
+  {s:"ADA §238.3",v:"Driving range or practice station not accessible",q:"5% min but no fewer than one of each type — practice putting green, practice tee, driving range station. Note total stations and how many accessible by golf car."}
+],
+"Mini Golf":[
+  {s:"ADA §206.2.2 / ADA §403.5.1",v:"No accessible route through course",q:"Accessible route must connect all holes. 36\" min width (ADA), 44\" min (CBC). Note holes unreachable due to narrow path, steps, or level changes."},
+  {s:"ADA §303.4",v:"Hole surface or approach has unramped level change",q:"Level changes >½\" require ramp. Note location and height of lips, steps, or unramped level changes."},
+  {s:"ADA §304.3.1",v:"No turning space at hole",q:"60\" turning space required at each accessible hole. Note if you could not position or maneuver at any hole."},
+  {s:"ADA §239.2 / ADA §239.3",v:"Less than 50% of holes accessible or not consecutive",q:"50% min of holes accessible. Accessible holes must be consecutive. One break in sequence permitted if last hole is last on course."}
+],
+"Pools":[
+  {s:"ADA §242.2",v:"No accessible entry into pool",q:"2 accessible entries required. At least 1 must be pool lift or sloped entry. Pools <300 linear ft wall: 1 entry sufficient if lift or sloped entry."},
+  {s:"ADA §1009.2.1",v:"Pool lift non-compliant",q:"Lift seat: 16\"–19\" AFF. Clear deck space: 36\" min each side. Weight capacity: 300 lbs min. Submerges: 18\" min below water."},
+  {s:"ADA §1009.3.1 / ADA §1009.3.2",v:"Pool sloped entry non-compliant",q:"Slope: 1:12 max. Submerged depth: 24\"–30\" below water level."},
+  {s:"ADA §1009.3.3 / ADA §505.4 / ADA §505.10.1",v:"Pool sloped entry handrails missing or non-compliant",q:"Two handrails required full length. Height: 34\"–38\" AFF above sloped surface. Clear width between rails: 33\"–38\". Top extension: 12\" horizontal min. Note where rails terminate vs. where entry ends."},
+  {s:"ADA §242.3",v:"Wading pool lacks sloped entry",q:"Every wading pool requires at least one sloped entry per §1009.3."},
+  {s:"ADA §242.4",v:"Spa lacks accessible entry",q:"At least one accessible entry: pool lift, transfer wall, or transfer system. Spas clustered: 5% min but no fewer than one per cluster."}
+],
+"Fishing":[
+  {s:"ADA §237.1",v:"Fishing pier or platform not accessible",q:"All fishing piers and platforms must be accessible. Accessible route to pier, turning space on pier, and compliant railings required."},
+  {s:"ADA §302.1",v:"Pier surface gaps or openings too wide",q:"Gaps between boards: ½\" max. Elongated openings must run perpendicular to travel direction. Measure gap width."},
+  {s:"ADA §303.3 / ADA §303.4",v:"Level changes between boards not beveled or ramped",q:"Board edge lips: ¼\"–½\" must be beveled. >½\" must be ramped. Measure lip height at board edges."}
+],
+"Boating":[
+  {s:"ADA §235.2",v:"Not enough accessible boat slips",q:"1–25 slips: 1; 26–50: 2; 51–100: 3; 101–150: 4; 151–300: 5; 301+: 5 + 1 per 100 over 300. Undivided pier edge: each 40' = one slip."},
+  {s:"ADA §235.3 / ADA §1003.3.2",v:"Boarding pier at boat launch ramp not accessible",q:"5% min but no fewer than one boarding pier accessible per launch ramp. Pier: 60\" wide min, full length."},
+  {s:"ADA §302.1",v:"Pier surface gaps or openings too wide",q:"Gaps: ½\" max. Elongated openings perpendicular to travel."},
+  {s:"ADA §303.3 / ADA §303.4",v:"Level changes on pier not beveled or ramped",q:"¼\"–½\": must be beveled. >½\": must be ramped. Measure lip height."}
+],
+"Amusement":[
+  {s:"ADA §234.3",v:"Amusement ride lacks accessible entry option",q:"Applies to NEW AND ALTERED rides only — not grandfathered existing. Exempt: rider-controlled, primarily children's with adult assistance, no seats. ALL rides require: accessible route to load/unload AND 60\" turning space at load/unload. Transfer seat height: 14\"–24\" AFF."},
+  {s:"ADA §1002.3",v:"Load/unload area lacks turning space",q:"60\" turning space required in both load AND unload areas at every accessible ride."},
+  {s:"ADA §234.3 / ADA §1002.6 / ADA §36.302(a)",v:"Transfer required but no assistive device provided",autoNote:true,notePrompt:"Transfer required? Space accommodate power chair? Device offered? What did staff say? Were you able to board?",q:"Transfer device must be available if you cannot independently transfer. Disney-style 'transfer from manual wheelchair' does not satisfy requirement for power wheelchair users. Document: whether transfer required, whether space accommodated power chair, whether any device offered, what staff said, whether you were able to board."}
+],
+"Beach":[
+  {s:"ADA §206.2.2 / ADA §36.304 / ADA §36.302(a)",v:"No accessible route to water's edge",autoNote:true,notePrompt:"Public or private beach? How far could you go? Surface type? Any accommodation offered?",q:"Accessible route from parking to WATER'S EDGE required — not just to dry sand or boardwalk. Mat, boardwalk, or firm surface path must reach where the waves are. Loose sand alone fails. Public beaches (Title II): programmatic access — one accessible point may satisfy. Private beach clubs (Title III): full and equal enjoyment standard. Document: surface type, how far you got, any accommodation offered."},
+  {s:"ADA §302.1 / ADA §303.3 / ADA §303.4",v:"Beach surface impassable — gaps, instability",q:"Surface must be firm and stable — loose sand, soft ground, unstable boardwalks fail. Gaps between boards: ½\" max. Level changes: ¼\"–½\" must be beveled; >½\" must be ramped."}
+],
+"Trails":[
+  {s:"ADA §302.1 / ADA §36.304",v:"Trail surface not firm and stable",q:"Firm and stable required — loose gravel, soft dirt, sand, wood chips fail. Note surface type and whether chair sank, shifted, or couldn't proceed."},
+  {s:"ADA §403.3 / ADA §405.2",v:"Trail running slope too steep",q:"Accessible routes: 1:20 max (5%). Steeper than 1:20 requires ramp treatment. Steeper than 1:12 non-compliant regardless."},
+  {s:"ADA §403.3",v:"Trail cross slope too steep",q:"1:48 max. If chair pulled sideways or felt like tipping — document it."},
+  {s:"ADA §403.5.1 / CBC §11B-403.5.1",v:"Trail too narrow",q:"36\" min (ADA), 48\" min (CBC exterior walks). Measure at narrowest point including vegetation, roots, obstacles."},
+  {s:"ADA §303.3 / ADA §303.4 / ADA §302.1",v:"Level changes or obstacles on trail",q:"¼\"–½\" must be beveled; >½\" must be ramped. Roots, rocks, raised edges >½\" are violations."},
+  {s:"CBC §11B-403.7",v:"No rest area on extended trail",q:"CBC: level rest areas every 400' max on gradients between 1:20 and 1:12. ADA has no equivalent."}
+],
+"Camping":[
+  {s:"ADA §244.1",v:"Accessible campsite not provided",q:"20% min but no fewer than one accessible campsite. Accessible route, level ground, firm surface, turning space, and accessible features required."},
+  {s:"ADA §302.1",v:"Camping surface not firm and stable",q:"Firm and stable required — loose gravel, soft dirt, grass fail. Note surface type and whether chair sank or shifted."},
+  {s:"ADA §244.4 / ADA §308.2.1",v:"Camp amenities out of reach or not on accessible route",q:"Accessible route must connect campsite to: restrooms, water, fire ring, picnic table, trash. Operable parts: 15\"–48\" AFF."}
+],
+"Picnic":[
+  {s:"ADA §245.2",v:"No accessible picnic table",q:"20% min but no fewer than one per picnic area. Surface: 28\"–34\" AFF. Knee clearance: 27\" high × 30\" wide × 19\" deep. Accessible route required."},
+  {s:"ADA §902.3",v:"Picnic table surface or knee clearance non-compliant",q:"Surface: 28\"–34\" AFF. Knee clearance: 27\" high × 30\" wide × 19\" deep. Toe clearance: 9\" high × 17\" deep."},
+  {s:"ADA §206.2.2 / ADA §302.1",v:"Accessible route to picnic area or table not provided",q:"Accessible route from parking to picnic area and to each accessible table. Surface must be firm and stable."},
+  {s:"ADA §308.2.1",v:"Grill or amenity out of reach",q:"Grills, water spigots, trash receptacle lids: 15\"–48\" AFF forward reach."},
+  {s:"ADA §211.1 / CBC §11B-602.1",v:"No accessible drinking fountain",q:"At least one wheelchair accessible unit required. Spout: 36\" max AFF. ≤5\" from front edge. Flow: 4\" min high. CBC requires both wheelchair AND standing height unit."}
+],
+"Exercise":[
+  {s:"ADA §236.1",v:"No accessible exercise equipment of each type",q:"At least one of each type accessible — each machine type counted separately. Accessible route, 30\"×48\" clear floor space, operable parts 15\"–48\" AFF."},
+  {s:"ADA §305.2",v:"Clear floor space at equipment obstructed or insufficient",q:"30\"×48\" min. Note nearest obstruction."},
+  {s:"ADA §302.1",v:"Surface at equipment not firm and stable",q:"Rubber mulch, loose gravel, sand fail. Note surface type and whether chair sank or shifted."},
+  {s:"ADA §206.2.2",v:"Accessible route to exercise area not provided",q:"Accessible route from parking to exercise area. Note surface type, level changes, whether route passable."}
+],
+"Shooting":[
+  {s:"ADA §1010.1",v:"Shooting facility firing position lacks turning space",q:"5% min but no fewer than one of each type of firing position accessible. 60\" turning space at each. Slope ≤1:48."}
+],
+"Outdoor Venues":[
+  {s:"ADA §206.2.2 / ADA §36.304",v:"Vendor booth or stall not on accessible route",q:"Accessible route must connect all vendor stalls, booths, and activity areas. Note any area unreachable due to narrow gaps, surface changes, or temporary barriers."},
+  {s:"ADA §206.2.2 / CBC §11B-108 / ADA §36.302(a)",v:"Temporary barrier or obstruction blocks accessible route",q:"Temporary fencing, A-frames, sandwich boards, vendor tables, equipment cords blocking route are violations. Note what was blocking, where, and whether staff addressed it when asked."},
+  {s:"ADA §302.1",v:"Temporary surface not firm and stable",q:"Rubber mats, artificial turf, loose gravel, grass must be firm and stable. Note surface type and whether chair sank, shifted, or couldn't proceed."}
+]
+
+}; // end VIOLATIONS
+
+// ============================================================
+// TILE STRUCTURE
+// ============================================================
+
+// Always-visible top-level categories
+const ALWAYS_CATS = [
+  {name:"Parking", subcats:["Spaces","Access Aisles","Signs","Surface & Markings","Clearance","Path of Travel","Loading Zone"]},
+  {name:"Path of Travel", subcats:["Exterior","Interior","To Restroom"]},
+  {name:"Entrance"},
+  {name:"Ramps"},
+  {name:"Restrooms", subcats:["Entry & Door","Turning & Maneuvering","Stall","Sink & Fixtures","Shower & Tub","Locker Room"]},
+  {name:"Counters & Reach"},
+  {name:"Policy Issues", subcats:["Features Blocked","Staff Conduct"]}
+];
+
+// Show if present (always on screen, Shonna taps only if encountered)
+const SHOW_IF_PRESENT_CATS = [
+  {name:"Elevators"},
+  {name:"Drinking Fountains"},
+  {name:"Platform Lifts"},
+  {name:"Saunas / Steam Rooms"},
+  {name:"ATM / Kiosk"}
+];
+
+// Establishment types — shown when that type is selected
+const ESTAB_CATS = {
+  "Restaurant": [{name:"Dining"}],
+  "Retail": [{name:"Retail — Shelving & Displays", subcats:["Shelving & Displays","Fitting Rooms","Mailbox / Packages"], isRetail:true}],
+  "Hotel": [{name:"Hotels"}],
+  "Medical": [{name:"Medical"}],
+  "Gym": [{name:"Gyms"}],
+  "Salon": [{name:"Salons"}],
+  "Spa": [{name:"Spa"}],
+  "Laundromat": [{name:"Machines"}],
+  "Gas Station": [{name:"Gas Station"}],
+  "Banks": [{name:"Banks"}],
+  "Storage": [{name:"Storage"}],
+  "ATM / Kiosk": [],  // handled by show-if-present
+  "Assembly / Venues": [{name:"Assembly / Venues"}],
+  "Outdoor & Recreation": [{name:"Outdoor & Recreation", subcats:["Beach","Trails","Fishing","Boating","Camping","Picnic","Golf","Mini Golf","Shooting","Exercise","Outdoor Venues","Bowling","Amusement"], isOutdoor:true}]
+};
+
+const ESTAB_TYPES = [
+  'Restaurant','Retail','Hotel','Medical','Gym','Salon','Spa',
+  'Laundromat','Gas Station','Banks','Storage','ATM / Kiosk',
+  'Assembly / Venues','Outdoor & Recreation'
+];
+
+const REASON_OPTIONS = [
+  "Closest location to my home",
+  "Only provider of this service nearby",
+  "On my route while running errands",
+  "Medical necessity",
+  "Neighborhood business",
+  "Recommended by someone",
+  "Regular spot"
+];
+
+// ============================================================
+// STATE
+// ============================================================
+
+let state = {
+  name:'', types:[], titleNum:3,
+  t2program:'', t2alt:'', t2altdist:'', t2staff:'',
+  date:'', reasons:{},
+  selectedTopCats:[],
+  selectedSubcats:{},
+  selectedCats:[],
+  violations:{},
+  receipt:'', receiptMode:'',
+  photosTaken:null,
+  restroom:'', spoke:'',
+  assistYes:false, assistNote:'',
+  with:'', elsewhere:false, elsewhereDetail:'',
+  additional:'', severity:0, severityNote:'', notes:'',
+  legalTheory:{'302a':false,'304':false},
+  legalNotes:{'302a':'','304':''}
+};
+
+let currentCatIndex=0, catQueue=[], currentSubcatParent='', subcatQueue=[], subcatQueueIndex=0;
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+
+function goScreen(id){
+  if(id==='s-cats') buildCatGrid();
+  if(id==='s-legal') buildLegalScreen();
+  if(id==='s-review') buildReview();
+  if(id==='s-submit') document.getElementById('submit-biz-name').textContent=state.name;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goHome(){ goScreen('s-home'); }
+
+function startNewCase(){
+  state={name:'',types:[],titleNum:3,t2program:'',t2alt:'',t2altdist:'',t2staff:'',
+    date:'',reasons:{},selectedTopCats:[],selectedSubcats:{},selectedCats:[],
+    violations:{},receipt:'',receiptMode:'',photosTaken:null,restroom:'',spoke:'',
+    assistYes:false,assistNote:'',with:'',elsewhere:false,elsewhereDetail:'',
+    additional:'',severity:0,severityNote:'',notes:'',
+    legalTheory:{'302a':false,'304':false},legalNotes:{'302a':'','304':''},
+    _workQueue:[],_workIndex:0};
+  document.getElementById('inp-name').value='';
+  document.getElementById('btn-name').disabled=true;
+  document.getElementById('t2-toggle').checked=false;
+  document.getElementById('t2-panel').classList.remove('visible');
+  const today=new Date();
+  const ds=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('inp-date').value=ds; state.date=ds;
+  buildTypeGrid(); buildReasonList();
+  ['inp-spoke','inp-assist','inp-with','inp-elsewhere','inp-additional','inp-notes','inp-severity-note']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('inp-assist').style.display='none';
+  document.getElementById('inp-elsewhere').style.display='none';
+  document.getElementById('inp-severity-note').style.display='none';
+  document.querySelectorAll('.receipt-btn,.pill').forEach(p=>p.classList.remove('selected'));
+  goScreen('s-name');
+}
+
+function checkName(){state.name=document.getElementById('inp-name').value.trim();document.getElementById('btn-name').disabled=state.name.length<2;}
+function toggleTitleII(on){state.titleNum=on?2:3;document.getElementById('t2-panel').classList.toggle('visible',on);}
+function setAlt(v){state.t2alt=v;document.getElementById('pill-alt-yes').classList.toggle('selected',v==='yes');document.getElementById('pill-alt-no').classList.toggle('selected',v==='no');document.getElementById('t2-altdetail').style.display=v==='yes'?'block':'none';}
+
+// ============================================================
+// ESTABLISHMENT TYPE GRID
+// ============================================================
+
+function buildTypeGrid(){
+  const g=document.getElementById('type-grid');g.innerHTML='';
+  // Usage frequency sort
+  const counts=getUsageCounts();
+  const sorted=[...ESTAB_TYPES].sort((a,b)=>(counts[b]||0)-(counts[a]||0));
+  sorted.forEach(t=>{
+    const d=document.createElement('div');d.className='tile'+(state.types.includes(t)?' selected':'');
+    d.textContent=t;
+    d.onclick=()=>{const i=state.types.indexOf(t);if(i>=0){state.types.splice(i,1);d.classList.remove('selected');}else{state.types.push(t);d.classList.add('selected');}document.getElementById('btn-type').disabled=state.types.length===0;};
+    g.appendChild(d);
+  });
+}
+
+function getUsageCounts(){
+  try{return JSON.parse(localStorage.getItem('ada_usage')||'{}')}catch(e){return {}}
+}
+function incrementUsage(key){
+  try{const c=getUsageCounts();c[key]=(c[key]||0)+1;localStorage.setItem('ada_usage',JSON.stringify(c));}catch(e){}
+}
+
+// ============================================================
+// REASON LIST
+// ============================================================
+
+function buildReasonList(){
+  const c=document.getElementById('reason-list');c.innerHTML='';state.reasons={};
+  REASON_OPTIONS.forEach(r=>{
+    state.reasons[r]={checked:false,note:''};
+    const row=document.createElement('div');row.className='violation-row';
+    const main=document.createElement('div');main.className='v-main';
+    const cb=document.createElement('div');cb.className='v-checkbox';
+    const txt=document.createElement('div');txt.className='v-text';
+    txt.innerHTML=`<div class="v-title">${r}</div>`;
+    const nb=document.createElement('button');nb.className='v-note-btn';nb.textContent='+ note';
+    main.appendChild(cb);main.appendChild(txt);main.appendChild(nb);row.appendChild(main);
+    const nt=document.createElement('div');nt.className='note-toggle';
+    const nf=document.createElement('textarea');nf.className='note-field';nf.placeholder='Add detail...';
+    nf.oninput=()=>{state.reasons[r].note=nf.value;};
+    nb.onclick=()=>{const open=nf.classList.toggle('visible');nb.classList.toggle('open',open);nb.textContent=open?'📝 note':'+ note';if(open)nf.focus();};
+    nt.appendChild(nf);row.appendChild(nt);
+    cb.onclick=()=>{
+      state.reasons[r].checked=!state.reasons[r].checked;
+      cb.classList.toggle('checked',state.reasons[r].checked);
+      nt.classList.toggle('visible',state.reasons[r].checked);
+      if(!state.reasons[r].checked){nf.classList.remove('visible');nb.classList.remove('open');nb.textContent='+ note';}
+      document.getElementById('btn-reason').disabled=!Object.values(state.reasons).some(x=>x.checked);
+    };
+    c.appendChild(row);
+  });
+}
+
+// ============================================================
+// CATEGORY GRID
+// ============================================================
+
+function buildCatGrid(){
+  const g=document.getElementById('cat-grid');g.innerHTML='';
+
+  // Build set of all tiles to show in main block
+  const mainTiles=[...ALWAYS_CATS.map(c=>c.name)];
+
+  // Inject establishment-type tiles into main block
+  const estabSet=new Set();
+  state.types.forEach(t=>{
+    (ESTAB_CATS[t]||[]).forEach(cat=>{
+      if(!estabSet.has(cat.name)){estabSet.add(cat.name);mainTiles.push(cat.name);}
+    });
+  });
+
+  // Render main block
+  mainTiles.forEach(name=>{
+    if(!VIOLATIONS[name] && !TILE_SUBCATS[name]) return;
+    addCatTile(g, name, state.selectedTopCats.includes(name));
+  });
+
+  // Other Possible Barriers section
+  const sip=document.createElement('div');sip.className='show-if-present-label';sip.style.gridColumn='1/-1';sip.textContent='Other Possible Barriers';g.appendChild(sip);
+  SHOW_IF_PRESENT_CATS.forEach(cat=>{addCatTile(g, cat.name, state.selectedTopCats.includes(cat.name));});
+
+  document.getElementById('btn-cats').disabled=state.selectedTopCats.length===0;
+}
+
+function addCatTile(g, name, selected){
+  const wrap=document.createElement('div');wrap.className='tile-wrap';
+  const d=document.createElement('div');d.className='tile'+(selected?' selected':'');d.textContent=name;
+  d.onclick=()=>{const i=state.selectedTopCats.indexOf(name);if(i>=0){state.selectedTopCats.splice(i,1);d.classList.remove('selected');}else{state.selectedTopCats.push(name);d.classList.add('selected');}document.getElementById('btn-cats').disabled=state.selectedTopCats.length===0;};
+  wrap.appendChild(d);
+  g.appendChild(wrap);
+}
+
+// ============================================================
+// SUBCAT FLOW
+// ============================================================
+
+const TILE_SUBCATS = {
+  'Parking':['Parking Spaces','Access Aisles','Signs','Surface & Markings','Clearance','Path of Travel','Loading Zone'],
+  'Path of Travel':['Exterior','Interior'],
+  'Restrooms':['Entry & Door','Turning & Maneuvering','Stall','Sink & Fixtures','Shower & Tub','Locker Room'],
+  'Policy Issues':['Features Blocked','Staff Conduct'],
+  'Retail — Shelving & Displays':['Shelving & Displays','Fitting Rooms','Mailbox / Packages'],
+  'Outdoor & Recreation':['Beach','Trails','Fishing','Boating','Camping','Picnic','Golf','Mini Golf','Shooting','Exercise','Outdoor Venues','Bowling','Amusement']
+};
+
+function handleCatsNext(){
+  // Build a master ordered list of work items: {type:'subcat'|'violations', cat}
+  // For each selected cat in order: if it needs subcats, show subcat picker first, then violations
+  state._workQueue = [];
+  state.selectedTopCats.forEach(cat=>{
+    if(TILE_SUBCATS[cat]) state._workQueue.push({type:'subcat', cat});
+    state._workQueue.push({type:'violations', cat});
+  });
+  state._workIndex = 0;
+  processNextWorkItem();
+}
+
+function processNextWorkItem(){
+  if(state._workIndex >= state._workQueue.length){
+    goScreen('s-intake');
+    return;
+  }
+  const item = state._workQueue[state._workIndex];
+  if(item.type==='subcat'){
+    showSubcatPicker(item.cat);
+  } else {
+    // Build violation keys for this category
+    const violKeys = getCatViolationKeys(item.cat);
+    if(violKeys.length === 0){
+      // No violations for this cat (e.g. subcat not selected) — skip
+      state._workIndex++;
+      processNextWorkItem();
+    } else {
+      catQueue = violKeys;
+      currentCatIndex = 0;
+      renderViolationScreen();
+      goScreen('s-violations');
+    }
+  }
+}
+
+function getCatViolationKeys(cat){
+  const keys = [];
+  if(TILE_SUBCATS[cat]){
+    const subs = state.selectedSubcats[cat] || [];
+    if(cat==='Parking') subs.forEach(s=>keys.push('Parking — '+s));
+    else if(cat==='Path of Travel') subs.forEach(s=>keys.push('Path of Travel — '+s));
+    else if(cat==='Restrooms') subs.forEach(s=>keys.push('Restrooms — '+s));
+    else if(cat==='Policy Issues') subs.forEach(s=>keys.push('Policy Issues — '+s));
+    else if(cat==='Retail — Shelving & Displays'){
+      subs.forEach(s=>{
+        if(s==='Shelving & Displays') keys.push('Retail — Shelving & Displays');
+        else if(s==='Fitting Rooms') keys.push('Retail — Fitting Rooms');
+        else if(s==='Mailbox / Packages') keys.push('Retail — Mailbox / Packages');
+      });
+    }
+    else if(cat==='Outdoor & Recreation') subs.forEach(s=>keys.push(s));
+  } else {
+    if(VIOLATIONS[cat]) keys.push(cat);
+  }
+  return keys;
+}
+
+function showSubcatPicker(parent){
+  currentSubcatParent=parent;
+  document.getElementById('subcat-title').textContent=parent+' — Which areas?';
+  const subs=TILE_SUBCATS[parent];
+  const g=document.getElementById('subcat-grid');g.innerHTML='';
+  subs.forEach(sub=>{
+    const d=document.createElement('div');
+    const already=(state.selectedSubcats[parent]||[]).includes(sub);
+    d.className='tile'+(already?' selected':'');d.textContent=sub;
+    d.onclick=()=>{
+      if(!state.selectedSubcats[parent]) state.selectedSubcats[parent]=[];
+      const i=state.selectedSubcats[parent].indexOf(sub);
+      if(i>=0){state.selectedSubcats[parent].splice(i,1);d.classList.remove('selected');}
+      else{state.selectedSubcats[parent].push(sub);d.classList.add('selected');}
+      document.getElementById('btn-subcats').disabled=!(state.selectedSubcats[parent]&&state.selectedSubcats[parent].length>0);
+    };
+    g.appendChild(d);
+  });
+  document.getElementById('btn-subcats').disabled=!(state.selectedSubcats[parent]&&state.selectedSubcats[parent].length>0);
+  goScreen('s-subcats');
+}
+
+function handleSubcatsNext(){
+  // Done with this subcat picker — move to next work item (violations for same cat)
+  state._workIndex++;
+  processNextWorkItem();
+}
+
+// Legacy — keep for reference but no longer used as entry point
+function buildFinalCatQueue(){
+  const queue=[];
+  state.selectedTopCats.forEach(cat=>{
+    queue.push(...getCatViolationKeys(cat));
+  });
+  state.selectedCats=queue;
+}
+
+// ============================================================
+// VIOLATION DRILLDOWN
+// ============================================================
+
+function startViolationDrilldown(){
+  catQueue=[...state.selectedCats];
+  currentCatIndex=0;
+  renderViolationScreen();
+  goScreen('s-violations');
+}
+
+function renderViolationScreen(){
+  const cat=catQueue[currentCatIndex];
+  document.getElementById('viol-cat-title').textContent=cat;
+  document.getElementById('viol-step').textContent=`Category ${currentCatIndex+1} of ${catQueue.length}`;
+  if(!state.violations[cat]) state.violations[cat]={};
+  const body=document.getElementById('viol-body');body.innerHTML='';
+  const items=VIOLATIONS[cat]||[];
+  items.forEach((item,idx)=>{
+    const saved=state.violations[cat][idx]||{checked:false,note:'',sub:''};
+    const row=document.createElement('div');row.className='violation-row';
+    const main=document.createElement('div');main.className='v-main';
+    const cb=document.createElement('div');cb.className='v-checkbox'+(saved.checked?' checked':'');
+    const txt=document.createElement('div');txt.className='v-text';
+    // Title + optional ? button inline, NO citation visible on screen
+    let titleHtml=`<div class="v-title">${item.v}`;
+    if(item.q) titleHtml+=` <button class="v-q-btn" onclick="showModal('${escAttr(item.v)}','${escAttr(item.q)}')">?</button>`;
+    titleHtml+=`</div>`;
+    txt.innerHTML=titleHtml;
+    // + note button on far right of main row
+    const nb=document.createElement('button');nb.className='v-note-btn'+(saved.note?' open':'');
+    nb.textContent='+ note';
+    main.appendChild(cb);main.appendChild(txt);main.appendChild(nb);row.appendChild(main);
+
+    // Sub-options (multi-select for items with sub array)
+    if(item.sub){
+      if(!Array.isArray(saved.subs)) saved.subs=saved.sub?[saved.sub]:[];
+      const subWrap=document.createElement('div');subWrap.style.cssText='margin-top:8px;margin-left:36px;display:'+(saved.checked?'flex':'none')+';flex-wrap:wrap;gap:8px;';
+      item.sub.forEach(opt=>{
+        const p=document.createElement('div');
+        const sel=saved.subs.includes(opt);
+        p.textContent=opt;
+        p.style.cssText='border:1px solid '+(sel?'#E8651A':'#333')+';border-radius:6px;padding:6px 12px;font-size:30px;font-weight:600;cursor:pointer;color:'+(sel?'#E8651A':'#f0b87a')+';background:'+(sel?'#1a0d00':'')+';';
+        p.onclick=()=>{
+          const i=saved.subs.indexOf(opt);
+          if(i>=0) saved.subs.splice(i,1); else saved.subs.push(opt);
+          state.violations[cat][idx]=saved;
+          const isSel=saved.subs.includes(opt);
+          p.style.borderColor=isSel?'#E8651A':'#333';p.style.color=isSel?'#E8651A':'#f0b87a';p.style.background=isSel?'#1a0d00':'';
+        };
+        subWrap.appendChild(p);
+      });
+      row.appendChild(subWrap);
+    }
+
+    // Note field
+    const nt=document.createElement('div');nt.className='note-toggle'+(saved.checked?' visible':'');
+    const nf=document.createElement('textarea');nf.className='note-field';
+    if(saved.note||(item.autoNote&&saved.checked)) nf.classList.add('visible');
+    nf.placeholder=item.notePrompt||'Measurement, observation, or detail...';
+    nf.value=saved.note||'';
+    nf.oninput=()=>{saved.note=nf.value;state.violations[cat][idx]=saved;};
+    if(nf.classList.contains('visible')){nb.classList.add('open');nb.textContent='📝 note';}
+    nb.onclick=()=>{const open=nf.classList.toggle('visible');nb.classList.toggle('open',open);nb.textContent=open?'📝 note':'+ note';if(open)nf.focus();};
+    nt.appendChild(nf);row.appendChild(nt);
+
+    cb.onclick=()=>{
+      saved.checked=!saved.checked;state.violations[cat][idx]=saved;
+      cb.classList.toggle('checked',saved.checked);
+      nt.classList.toggle('visible',saved.checked);
+      if(item.sub){const sw=row.querySelectorAll('div[style*="flex-wrap"]')[0];if(sw)sw.style.display=saved.checked?'flex':'none';}
+      if(item.autoNote&&saved.checked){nf.classList.add('visible');nb.classList.add('open');nb.textContent='📝 note';setTimeout(()=>nf.focus(),50);}
+      if(!saved.checked){nf.classList.remove('visible');nb.classList.remove('open');nb.textContent='+ note';}
+    };
+    body.appendChild(row);
+  });
+}
+
+function startViolationDrilldown(){
+  // Legacy entry point — not used in new flow
+  catQueue=[...state.selectedCats];
+  currentCatIndex=0;
+  renderViolationScreen();
+  goScreen('s-violations');
+}
+
+function nextCat(){
+  if(currentCatIndex<catQueue.length-1){
+    currentCatIndex++;
+    renderViolationScreen();
+    document.getElementById('viol-body').scrollTop=0;
+  } else {
+    // Done with this category's violations — advance work queue
+    state._workIndex++;
+    processNextWorkItem();
+  }
+}
+
+function prevCat(){
+  if(currentCatIndex>0){
+    currentCatIndex--;
+    renderViolationScreen();
+  } else {
+    // At first violation screen for this cat — go back to subcat picker if applicable, else cats screen
+    // Find the current cat in work queue
+    const item=state._workQueue[state._workIndex];
+    if(item && TILE_SUBCATS[item.cat]){
+      // Go back to this cat's subcat picker
+      state._workIndex--;
+      showSubcatPicker(item.cat);
+    } else {
+      goScreen('s-cats');
+    }
+  }
+}
+
+// ============================================================
+// SITE NOTES HELPERS
+// ============================================================
+
+function setReceipt(mode, el){
+  state.receiptMode=mode;
+  document.querySelectorAll('.receipt-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function captureReceipt(){ document.getElementById('receipt-cam').click(); }
+function handleReceiptCapture(input){
+  if(input.files&&input.files[0]){
+    state.receiptMode='captured';
+    state.receiptPhoto=input.files[0].name;
+    document.getElementById('rcpt-capture').classList.add('selected');
+    document.querySelectorAll('.receipt-btn').forEach(b=>{if(b.id!=='rcpt-capture')b.classList.remove('selected');});
+  }
+}
+function setPhotos(v){
+  state.photosTaken=v;
+  document.getElementById('pill-photos-yes').classList.toggle('selected',v===true);
+  document.getElementById('pill-photos-no').classList.toggle('selected',v===false);
+}
+function setRestroom(el){
+  state.restroom=el.textContent;
+  el.closest('div').querySelectorAll('.pill').forEach(p=>p.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function setAssist(v){
+  state.assistYes=v;
+  document.getElementById('pill-assist-no').classList.toggle('selected',!v);
+  document.getElementById('pill-assist-yes').classList.toggle('selected',v);
+  document.getElementById('inp-assist').style.display=v?'block':'none';
+}
+function setElsewhere(v){
+  state.elsewhere=v;
+  document.getElementById('pill-else-no').classList.toggle('selected',!v);
+  document.getElementById('pill-else-yes').classList.toggle('selected',v);
+  document.getElementById('inp-elsewhere').style.display=v?'block':'none';
+}
+
+function setSeverity(val, el){
+  state.severity=val;
+  document.querySelectorAll('#sev-standard,#sev-egregious').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  const note=document.getElementById('inp-severity-note');
+  note.style.display=val==='egregious'?'block':'none';
+  if(val==='egregious') note.focus();
+}
+
+// ============================================================
+// LEGAL THEORY SCREEN
+// ============================================================
+
+const LEGAL_ITEMS = [
+  {key:'302a', label:'Operational/policy failure', hint:'No procedure, no training, no accommodation, or operations actively created barriers. Forces policy paragraph in complaint.'},
+  {key:'304',  label:'Barrier could be removed', hint:'Physical barrier readily achievable to fix. Forces §36.304 argument in complaint.'}
+];
+
+function buildLegalScreen(){
+  const c=document.getElementById('legal-items');c.innerHTML='';
+  LEGAL_ITEMS.forEach(item=>{
+    const row=document.createElement('div');row.className='violation-row';
+    const main=document.createElement('div');main.className='v-main';
+    const cb=document.createElement('div');cb.className='v-checkbox'+(state.legalTheory[item.key]?' checked':'');
+    const txt=document.createElement('div');txt.className='v-text';
+    txt.innerHTML=`<div class="v-title">${item.label}</div><div class="v-section" style="font-size:30px;color:var(--subtext);margin-top:3px;">${item.hint}</div>`;
+    const nb=document.createElement('button');nb.className='v-note-btn'+(state.legalNotes[item.key]?' open':'');
+    nb.textContent=state.legalNotes[item.key]?'📝 note':'+ note';
+    main.appendChild(cb);main.appendChild(txt);main.appendChild(nb);row.appendChild(main);
+    const nt=document.createElement('div');nt.className='note-toggle'+(state.legalTheory[item.key]?' visible':'');
+    const nf=document.createElement('textarea');nf.className='note-field'+(state.legalNotes[item.key]?' visible':'');
+    nf.placeholder='Detail for attorney...';nf.value=state.legalNotes[item.key]||'';
+    nf.oninput=()=>{state.legalNotes[item.key]=nf.value;};
+    if(nf.classList.contains('visible')){nb.classList.add('open');nb.textContent='📝 note';}
+    nb.onclick=()=>{const open=nf.classList.toggle('visible');nb.classList.toggle('open',open);nb.textContent=open?'📝 note':'+ note';if(open)nf.focus();};
+    nt.appendChild(nf);row.appendChild(nt);
+    cb.onclick=()=>{
+      state.legalTheory[item.key]=!state.legalTheory[item.key];
+      cb.classList.toggle('checked',state.legalTheory[item.key]);
+      nt.classList.toggle('visible',state.legalTheory[item.key]);
+      if(!state.legalTheory[item.key]){nf.classList.remove('visible');nb.classList.remove('open');nb.textContent='+ note';}
+    };
+    c.appendChild(row);
+  });
+}
+
+// ============================================================
+// REVIEW
+// ============================================================
+
+function buildReview(){
+  state.spoke=document.getElementById('inp-spoke').value;
+  state.assistNote=document.getElementById('inp-assist').value;
+  state.with=document.getElementById('inp-with').value;
+  state.elsewhereDetail=document.getElementById('inp-elsewhere').value;
+  state.additional=document.getElementById('inp-additional').value;
+  state.severityNote=document.getElementById('inp-severity-note').value;
+  state.notes=document.getElementById('inp-notes').value;
+
+  const viols=getViolationSummary();
+  const reasons=Object.entries(state.reasons).filter(([,v])=>v.checked).map(([k,v])=>k+(v.note?' — '+v.note:''));
+  const legalSelected=LEGAL_ITEMS.filter(i=>state.legalTheory[i.key]).map(i=>i.label+(state.legalNotes[i.key]?' — '+state.legalNotes[i.key]:''));
+  const body=document.getElementById('review-body');body.innerHTML='';
+
+  const receiptDisplay = state.receiptMode==='none'?'No receipt':state.receiptMode==='photos'?'In photos':state.receiptMode==='captured'?'Captured in app':'Not noted';
+
+  const sections=[
+    {title:'Business',items:[state.name,`Title ${state.titleNum}`,...state.types]},
+    {title:'Date',items:[formatDate(state.date)]},
+    {title:'Reason',items:reasons.length?reasons:['Not specified']},
+    {title:'Violations',items:viols.length?viols:['None checked']},
+    {title:'Legal Theory',items:legalSelected.length?legalSelected:['None flagged']},
+    {title:'Site Notes',items:[
+      `Receipt: ${receiptDisplay}`,
+      state.photosTaken!==null?`Photos taken: ${state.photosTaken?'Yes':'No'}`:'',
+      state.restroom&&`Restroom: ${state.restroom}`,
+      state.spoke&&`Spoke to: ${state.spoke}`,
+      state.assistYes?`Assistance: ${state.assistNote||'Yes'}`:'Assistance: No',
+      state.with&&`With: ${state.with}`,
+      state.elsewhere?`Went elsewhere: ${state.elsewhereDetail}`:'Did not go elsewhere',
+      state.additional&&`Additional: ${state.additional}`,
+      state.severity&&`Severity: ${state.severity.charAt(0).toUpperCase()+state.severity.slice(1)}${state.severityNote?' — '+state.severityNote:''}`,
+      state.notes&&`Notes: ${state.notes}`
+    ].filter(Boolean)}
+  ];
+
+  sections.forEach(s=>{
+    const sec=document.createElement('div');sec.className='review-section';
+    sec.innerHTML=`<div class="review-section-header"><div class="review-section-title">${s.title}</div></div><div class="review-section-body">${s.items.map(i=>`<div class="review-item">${i}</div>`).join('')}</div>`;
+    body.appendChild(sec);
+  });
+}
+
+function getViolationSummary(){
+  const lines=[];
+  Object.entries(state.violations).forEach(([cat,items])=>{
+    Object.entries(items).forEach(([idx,item])=>{
+      if(item.checked){
+        const v=VIOLATIONS[cat]&&VIOLATIONS[cat][idx];
+        if(v){
+          const subStr=item.subs&&item.subs.length?' ['+item.subs.join(', ')+']':(item.sub?' ['+item.sub+']':'');
+          lines.push(`${v.s} — ${v.v}${subStr}${item.note?' | Note: '+item.note:''}`);
+        }
+      }
+    });
+  });
+  return lines;
+}
+
+// ============================================================
+// EMAIL SUBMIT
+// ============================================================
+
+function sendEmail(){
+  state.types.forEach(t=>incrementUsage(t));
+  const viols=getViolationSummary().join('\n');
+  const reasons=Object.entries(state.reasons).filter(([,v])=>v.checked).map(([k,v])=>k+(v.note?' — '+v.note:'')).join(', ');
+  const sevLine=state.severity?`${state.severity}${state.severityNote?' — '+state.severityNote:''}`:'Not rated';
+  const legalLines=LEGAL_ITEMS.filter(i=>state.legalTheory[i.key]).map(i=>i.label+(state.legalNotes[i.key]?' — '+state.legalNotes[i.key]:''));
+  const receiptDisplay=state.receiptMode==='none'?'No receipt':state.receiptMode==='photos'?'In photos':state.receiptMode==='captured'?'Captured in app':'Not noted';
+
+  const body=`NEW CASE CLAUDE — ${state.name}
+
+BUSINESS: ${state.name}
+TYPE: ${state.types.join(', ')}
+TITLE: Title ${state.titleNum}
+DATE: ${formatDate(state.date)}
+REASON FOR VISIT: ${reasons||'Not specified'}
+
+VIOLATIONS:
+${viols||'None checked'}
+
+LEGAL THEORY:
+${legalLines.length?legalLines.join('\n'):'Not flagged'}
+
+RECEIPT: ${receiptDisplay}
+PHOTOS TAKEN: ${state.photosTaken===true?'Yes':state.photosTaken===false?'No':'Not noted'}
+RESTROOM: ${state.restroom||'Not noted'}
+SPOKE TO: ${state.spoke||'None'}
+ASSISTANCE GIVEN: ${state.assistYes?(state.assistNote||'Yes — see notes'):'No'}
+WHO WAS WITH ME: ${state.with||'Not noted'}
+WENT ELSEWHERE: ${state.elsewhere?(state.elsewhereDetail||'Yes'):'No'}
+ADDITIONAL ISSUES: ${state.additional||'None'}
+SEVERITY: ${sevLine}
+FINAL NOTES: ${state.notes||'None'}${state.titleNum===2?`
+
+TITLE II EXTRAS:
+Program / Service: ${state.t2program||'Not noted'}
+Accessible alternative: ${state.t2alt||'Not noted'}${state.t2alt==='yes'?' — '+state.t2altdist:''}
+Staff contact: ${state.t2staff||'None'}`:''}`;
+
+  const cleanBody=body.replace(/§/g,'');
+  window.location.href=`mailto:shonnacounter@yahoo.com?subject=${encodeURIComponent('NEW CASE CLAUDE — '+state.name)}&body=${encodeURIComponent(cleanBody)}`;
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+
+function showModal(title, body){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').textContent=body;
+  document.getElementById('modal-overlay').classList.add('visible');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('visible');}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+
+function formatDate(d){
+  if(!d)return'';
+  const dt=new Date(d+'T12:00:00');
+  return dt.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+
+function escAttr(s){
+  return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+buildTypeGrid();
+buildReasonList();
+</script>
+</body>
+</html>
