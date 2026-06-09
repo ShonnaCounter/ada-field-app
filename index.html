@@ -274,14 +274,12 @@
   <div class="progress-bar"><div class="progress-fill" style="width:87%"></div></div>
   <div class="scroll-body">
     <!-- Receipt -->
-    <div class="intake-q">
-      <div class="q-label">Receipt</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      <span class="q-label" style="margin:0;">Receipt?</span>
       <div style="display:flex;gap:8px;">
-        <button class="receipt-btn" id="rcpt-none" onclick="setReceipt('none',this)">No Receipt</button>
-        <button class="receipt-btn" id="rcpt-photos" onclick="setReceipt('photos',this)">In Photos</button>
-        <button class="receipt-btn" id="rcpt-capture" onclick="captureReceipt()">📷 Capture</button>
+        <div class="pill" id="pill-receipt-yes" onclick="setReceipt(true)">Yes</div>
+        <div class="pill" id="pill-receipt-no" onclick="setReceipt(false)">No</div>
       </div>
-      <input type="file" id="receipt-cam" accept="image/*" capture="environment" style="display:none" onchange="handleReceiptCapture(this)">
     </div>
     <!-- Photos taken -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
@@ -899,7 +897,7 @@ let state = {
   selectedSubcats:{},
   selectedCats:[],
   violations:{},
-  receipt:'', receiptMode:'',
+  receiptYes:false,
   photosTaken:null,
   restroom:'', spoke:'',
   assistYes:false, assistNote:'',
@@ -928,7 +926,7 @@ function goHome(){ goScreen('s-home'); }
 function startNewCase(){
   state={name:'',types:[],titleNum:3,t2program:'',t2alt:'',t2altdist:'',t2staff:'',
     date:'',reasons:{},selectedTopCats:[],selectedSubcats:{},selectedCats:[],
-    violations:{},receipt:'',receiptMode:'',photosTaken:null,restroom:'',spoke:'',
+    violations:{},receiptYes:false,photosTaken:null,restroom:'',spoke:'',
     assistYes:false,assistNote:'',with:'',elsewhere:false,elsewhereDetail:'',
     additional:'',severity:0,severityNote:'',notes:'',
     legalTheory:{'302a':false,'304':false},legalNotes:{'302a':'','304':''},
@@ -946,7 +944,7 @@ function startNewCase(){
   document.getElementById('inp-assist').style.display='none';
   document.getElementById('inp-elsewhere').style.display='none';
   document.getElementById('inp-severity-note').style.display='none';
-  document.querySelectorAll('.receipt-btn,.pill').forEach(p=>p.classList.remove('selected'));
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('selected'));
   goScreen('s-name');
 }
 
@@ -1276,19 +1274,10 @@ function prevCat(){
 // SITE NOTES HELPERS
 // ============================================================
 
-function setReceipt(mode, el){
-  state.receiptMode=mode;
-  document.querySelectorAll('.receipt-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-}
-function captureReceipt(){ document.getElementById('receipt-cam').click(); }
-function handleReceiptCapture(input){
-  if(input.files&&input.files[0]){
-    state.receiptMode='captured';
-    state.receiptPhoto=input.files[0].name;
-    document.getElementById('rcpt-capture').classList.add('selected');
-    document.querySelectorAll('.receipt-btn').forEach(b=>{if(b.id!=='rcpt-capture')b.classList.remove('selected');});
-  }
+function setReceipt(v){
+  state.receiptYes=v;
+  document.getElementById('pill-receipt-no').classList.toggle('selected',!v);
+  document.getElementById('pill-receipt-yes').classList.toggle('selected',v);
 }
 function setPhotos(v){
   state.photosTaken=v;
@@ -1377,8 +1366,6 @@ function buildReview(){
   const legalSelected=LEGAL_ITEMS.filter(i=>state.legalTheory[i.key]).map(i=>i.label+(state.legalNotes[i.key]?' — '+state.legalNotes[i.key]:''));
   const body=document.getElementById('review-body');body.innerHTML='';
 
-  const receiptDisplay = state.receiptMode==='none'?'No receipt':state.receiptMode==='photos'?'In photos':state.receiptMode==='captured'?'Captured in app':'Not noted';
-
   const sections=[
     {title:'Business',items:[state.name,`Title ${state.titleNum}`,...state.types]},
     {title:'Date',items:[formatDate(state.date)]},
@@ -1386,7 +1373,7 @@ function buildReview(){
     {title:'Violations',items:viols.length?viols:['None checked']},
     {title:'Legal Theory',items:legalSelected.length?legalSelected:['None flagged']},
     {title:'Site Notes',items:[
-      `Receipt: ${receiptDisplay}`,
+      `Receipt: ${state.receiptYes?'Yes':'No'}`,
       state.photosTaken!==null?`Photos taken: ${state.photosTaken?'Yes':'No'}`:'',
       state.restroom&&`Restroom: ${state.restroom}`,
       state.spoke&&`Spoke to: ${state.spoke}`,
@@ -1432,7 +1419,7 @@ function sendEmail(){
   const reasons=Object.entries(state.reasons).filter(([,v])=>v.checked).map(([k,v])=>k+(v.note?' — '+v.note:'')).join(', ');
   const sevLine=state.severity?`${state.severity}${state.severityNote?' — '+state.severityNote:''}`:'Not rated';
   const legalLines=LEGAL_ITEMS.filter(i=>state.legalTheory[i.key]).map(i=>i.label+(state.legalNotes[i.key]?' — '+state.legalNotes[i.key]:''));
-  const receiptDisplay=state.receiptMode==='none'?'No receipt':state.receiptMode==='photos'?'In photos':state.receiptMode==='captured'?'Captured in app':'Not noted';
+  const receiptDisplay=state.receiptYes?'Yes':'No';
 
   const body=`NEW CASE CLAUDE — ${state.name}
 
