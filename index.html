@@ -1421,7 +1421,7 @@ function sendEmail(){
   const legalLines=LEGAL_ITEMS.filter(i=>state.legalTheory[i.key]).map(i=>i.label+(state.legalNotes[i.key]?' - '+state.legalNotes[i.key]:''));
   const receiptDisplay=state.receiptYes?'Yes':'No';
 
-  const body=`NEW CASE CLAUDE - ${state.name}
+  const body=`NEW CASE SLOANE - ${state.name}
 
 BUSINESS: ${state.name}
 TYPE: ${state.types.join(', ')}
@@ -1452,7 +1452,7 @@ Accessible alternative: ${state.t2alt||'Not noted'}${state.t2alt==='yes'?' - '+s
 Staff contact: ${state.t2staff||'None'}`:''}`;
 
   const cleanBody=body.replace(/§/g,'');
-  window.location.href=`mailto:shonnacounter@yahoo.com?subject=${encodeURIComponent('NEW CASE CLAUDE - '+state.name)}&body=${encodeURIComponent(cleanBody)}`;
+  window.location.href=`mailto:shonnacounter@yahoo.com?subject=${encodeURIComponent('NEW CASE SLOANE - '+state.name)}&body=${encodeURIComponent(cleanBody)}`;
 }
 
 // ============================================================

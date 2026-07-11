@@ -1,7 +1,7 @@
 {
-  "name": "ADA Field App v2.1.1",
+  "name": "ADA Field App v2.1.2",
   "short_name": "ADA",
-  "description": "ADA compliance site documentation — v2.1.1",
+  "description": "ADA compliance site documentation — v2.1.2",
   "start_url": "/ada-field-app/",
   "display": "standalone",
   "background_color": "#000000",
